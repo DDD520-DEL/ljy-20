@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { SetupModal } from '@/components/common/SetupModal';
@@ -9,10 +9,15 @@ import { Dashboard } from '@/pages/Dashboard';
 import { TaskList } from '@/pages/TaskList';
 import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
+import { ExportReport } from '@/components/export/ExportReport';
 import { useStore } from '@/store/useStore';
 import { generateId } from '@/utils/progressUtils';
+import { exportToPdf } from '@/utils/exportPdf';
 
 function App() {
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
   const {
     deceased,
     currentUser,
@@ -27,6 +32,21 @@ function App() {
     setCurrentUser,
     checkDeadlineNotifications,
   } = useStore();
+
+  const handleExportPdf = async () => {
+    if (!reportRef.current || !deceased) return;
+
+    setIsExporting(true);
+    try {
+      const filename = `${deceased.name}老人治丧事务进度报告_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}`;
+      await exportToPdf(reportRef.current, filename);
+    } catch (error) {
+      console.error('导出失败:', error);
+      alert('导出失败，请重试');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     const hasInitialized = localStorage.getItem('funeral_planner_initialized');
@@ -93,7 +113,7 @@ function App() {
         <Sidebar />
 
         <div className="flex-1 flex flex-col lg:ml-64">
-          <Header />
+          <Header onExportPdf={handleExportPdf} isExporting={isExporting} />
 
           <main className="flex-1 p-4 md:p-6 lg:p-8">
             {renderContent()}
@@ -105,6 +125,8 @@ function App() {
       {showTaskModal && <AddTaskModal />}
       {showAssignModal && <AssignTaskModal />}
       {showMemberModal && <AddMemberModal />}
+
+      {deceased && <ExportReport reportRef={reportRef} />}
     </div>
   );
 }

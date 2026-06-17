@@ -1,9 +1,14 @@
 import { useStore } from '@/store/useStore';
-import { UserPlus, Plus, Bell, RefreshCw } from 'lucide-react';
+import { UserPlus, Plus, Bell, RefreshCw, Download, Loader2 } from 'lucide-react';
 import { formatDate } from '@/utils/progressUtils';
 import { NotificationCenter } from '@/components/common/NotificationCenter';
 
-export const Header = () => {
+interface HeaderProps {
+  onExportPdf?: () => void;
+  isExporting?: boolean;
+}
+
+export const Header = ({ onExportPdf, isExporting = false }: HeaderProps) => {
   const {
     deceased,
     currentUser,
@@ -37,6 +42,22 @@ export const Header = () => {
       </div>
 
       <div className="flex items-center gap-3">
+        {deceased && onExportPdf && (
+          <button
+            onClick={onExportPdf}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="导出PDF报告"
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline">{isExporting ? '导出中...' : '导出报告'}</span>
+          </button>
+        )}
+
         <button
           onClick={() => setShowMemberModal(true)}
           className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
