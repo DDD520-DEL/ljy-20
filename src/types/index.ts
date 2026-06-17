@@ -45,6 +45,7 @@ export interface Note {
   content: string;
   authorId: string;
   createdAt: string;
+  parentId?: string;
 }
 
 export interface FuneralHome {

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Check, Clock, AlertTriangle, UserPlus, MoreVertical, Trash2, Edit2 } from 'lucide-react';
+import { Check, Clock, AlertTriangle, UserPlus, MoreVertical, Trash2, MessageCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import type { Task } from '@/types';
 import { MemberAvatar } from '@/components/members/MemberAvatar';
+import { TaskNotes } from './TaskNotes';
 import {
   getStatusText,
   getStatusClass,
@@ -20,6 +21,7 @@ interface TaskCardProps {
 export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
   const [ripple, setRipple] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   const {
     members,
@@ -36,6 +38,7 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
 
   const daysRemaining = task.dueDate ? getDaysRemaining(task.dueDate) : null;
   const isOverdue = daysRemaining !== null && daysRemaining < 0;
+  const notesCount = task.notes?.length || 0;
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -169,6 +172,23 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
                     <span>认领任务</span>
                   </button>
                 )}
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowNotes(!showNotes);
+                  }}
+                  className={`flex items-center gap-1 text-xs transition-colors ${
+                    showNotes
+                      ? 'text-primary-600'
+                      : notesCount > 0
+                      ? 'text-primary-600'
+                      : 'text-slate-400 hover:text-primary-600'
+                  }`}
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>备注{notesCount > 0 ? ` (${notesCount})` : ''}</span>
+                </button>
               </div>
             </div>
 
@@ -231,6 +251,8 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
           </div>
         </div>
       </div>
+
+      {showNotes && <TaskNotes task={task} />}
     </div>
   );
 };

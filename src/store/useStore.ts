@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate } from '@/data/taskTemplate';
 import { saveToStorage, loadFromStorage } from '@/utils/storage';
@@ -32,6 +32,8 @@ interface AppState {
   unassignTask: (taskId: string) => void;
   toggleTaskStatus: (taskId: string) => void;
   setTaskStatus: (taskId: string, status: TaskStatus) => void;
+  addNote: (taskId: string, content: string, authorId: string, parentId?: string) => void;
+  deleteNote: (taskId: string, noteId: string) => void;
   setShowSetup: (show: boolean) => void;
   setShowMemberModal: (show: boolean) => void;
   setShowTaskModal: (show: boolean) => void;
@@ -235,6 +237,44 @@ export const useStore = create<AppState>((set, get) => {
               }
             : t
         ),
+      }));
+      persist();
+    },
+
+    addNote: (taskId, content, authorId, parentId) => {
+      const newNote: Note = {
+        id: generateId(),
+        taskId,
+        content: content.trim(),
+        authorId,
+        createdAt: new Date().toISOString(),
+        parentId,
+      };
+      set((state) => ({
+        tasks: state.tasks.map((t) =>
+          t.id === taskId
+            ? { ...t, notes: [...(t.notes || []), newNote] }
+            : t
+        ),
+      }));
+      persist();
+    },
+
+    deleteNote: (taskId, noteId) => {
+      set((state) => ({
+        tasks: state.tasks.map((t) => {
+          if (t.id !== taskId) return t;
+          const toRemove = new Set<string>([noteId]);
+          (t.notes || []).forEach((n) => {
+            if (n.parentId && toRemove.has(n.parentId)) {
+              toRemove.add(n.id);
+            }
+          });
+          return {
+            ...t,
+            notes: (t.notes || []).filter((n) => !toRemove.has(n.id)),
+          };
+        }),
       }));
       persist();
     },
