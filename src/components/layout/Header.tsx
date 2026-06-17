@@ -1,9 +1,23 @@
 import { useStore } from '@/store/useStore';
 import { UserPlus, Plus, Bell, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/utils/progressUtils';
+import { NotificationCenter } from '@/components/common/NotificationCenter';
 
 export const Header = () => {
-  const { deceased, setShowMemberModal, setShowTaskModal, resetData } = useStore();
+  const {
+    deceased,
+    currentUser,
+    notifications,
+    showNotificationPanel,
+    setShowMemberModal,
+    setShowTaskModal,
+    setShowNotificationPanel,
+    resetData,
+  } = useStore();
+
+  const unreadCount = currentUser
+    ? notifications.filter((n) => n.userId === currentUser.id && !n.read).length
+    : 0;
 
   return (
     <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
@@ -39,10 +53,27 @@ export const Header = () => {
           <span className="hidden sm:inline">添加任务</span>
         </button>
 
-        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+            className={`p-2 rounded-lg transition-colors relative ${
+              showNotificationPanel
+                ? 'bg-primary-100 text-primary-600'
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-medium text-white bg-red-500 rounded-full">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <NotificationCenter
+            isOpen={showNotificationPanel}
+            onClose={() => setShowNotificationPanel(false)}
+          />
+        </div>
 
         <button
           onClick={() => {

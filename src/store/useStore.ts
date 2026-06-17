@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate } from '@/data/taskTemplate';
 import { saveToStorage, loadFromStorage } from '@/utils/storage';
-import { generateId } from '@/utils/progressUtils';
+import { generateId, getDaysRemaining } from '@/utils/progressUtils';
 
 interface AppState {
   deceased: Deceased | null;
@@ -11,6 +11,8 @@ interface AppState {
   tasks: Task[];
   categories: TaskCategory[];
   currentUser: FamilyMember | null;
+  notifications: Notification[];
+  showNotificationPanel: boolean;
   showSetup: boolean;
   showMemberModal: boolean;
   showTaskModal: boolean;
@@ -34,7 +36,12 @@ interface AppState {
   setShowMemberModal: (show: boolean) => void;
   setShowTaskModal: (show: boolean) => void;
   setShowAssignModal: (show: boolean, taskId?: string) => void;
+  setShowNotificationPanel: (show: boolean) => void;
   setActiveTab: (tab: string) => void;
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  checkDeadlineNotifications: () => void;
   resetData: () => void;
   loadFromLocalStorage: () => void;
 }
@@ -44,9 +51,10 @@ interface PersistedData {
   members: FamilyMember[];
   tasks: Task[];
   currentUser: FamilyMember | null;
+  notifications: Notification[];
 }
 
-const getInitialState = (): Omit<AppState, keyof ReturnType<typeof create>> => {
+const getInitialState = () => {
   const persisted = loadFromStorage<PersistedData>();
   if (persisted) {
     return {
@@ -54,11 +62,13 @@ const getInitialState = (): Omit<AppState, keyof ReturnType<typeof create>> => {
       members: persisted.members,
       tasks: persisted.tasks,
       currentUser: persisted.currentUser,
+      notifications: persisted.notifications || [],
       categories,
       showSetup: !persisted.deceased,
       showMemberModal: false,
       showTaskModal: false,
       showAssignModal: false,
+      showNotificationPanel: false,
       selectedTaskId: null,
       activeTab: 'dashboard',
     };
@@ -68,12 +78,14 @@ const getInitialState = (): Omit<AppState, keyof ReturnType<typeof create>> => {
     deceased: null,
     members: [],
     tasks: [],
+    notifications: [],
     categories,
     currentUser: null,
     showSetup: true,
     showMemberModal: false,
     showTaskModal: false,
     showAssignModal: false,
+    showNotificationPanel: false,
     selectedTaskId: null,
     activeTab: 'dashboard',
   };
@@ -81,8 +93,8 @@ const getInitialState = (): Omit<AppState, keyof ReturnType<typeof create>> => {
 
 export const useStore = create<AppState>((set, get) => {
   const persist = () => {
-    const { deceased, members, tasks, currentUser } = get();
-    saveToStorage({ deceased, members, tasks, currentUser });
+    const { deceased, members, tasks, currentUser, notifications } = get();
+    saveToStorage({ deceased, members, tasks, currentUser, notifications });
   };
 
   return {
@@ -158,6 +170,18 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     assignTask: (taskId, memberId) => {
+      const task = get().tasks.find((t) => t.id === taskId);
+      if (task && task.assigneeId !== memberId) {
+        const newNotification: Omit<Notification, 'id' | 'createdAt'> = {
+          type: 'task_assigned',
+          taskId,
+          taskTitle: task.title,
+          userId: memberId,
+          read: false,
+          message: `您有新的任务需要处理：${task.title}`,
+        };
+        get().addNotification(newNotification);
+      }
       set((state) => ({
         tasks: state.tasks.map((t) =>
           t.id === taskId ? { ...t, assigneeId: memberId } : t
@@ -220,7 +244,105 @@ export const useStore = create<AppState>((set, get) => {
     setShowTaskModal: (show) => set({ showTaskModal: show }),
     setShowAssignModal: (show, taskId) =>
       set({ showAssignModal: show, selectedTaskId: taskId || null }),
+    setShowNotificationPanel: (show) => set({ showNotificationPanel: show }),
     setActiveTab: (tab) => set({ activeTab: tab }),
+
+    addNotification: (notification) => {
+      const newNotification: Notification = {
+        ...notification,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+      };
+      set((state) => ({
+        notifications: [newNotification, ...state.notifications],
+      }));
+      persist();
+    },
+
+    markNotificationRead: (id) => {
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.id === id ? { ...n, read: true } : n
+        ),
+      }));
+      persist();
+    },
+
+    markAllNotificationsRead: () => {
+      const currentUser = get().currentUser;
+      if (!currentUser) return;
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.userId === currentUser.id ? { ...n, read: true } : n
+        ),
+      }));
+      persist();
+    },
+
+    checkDeadlineNotifications: () => {
+      const { tasks, notifications } = get();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      tasks.forEach((task) => {
+        if (task.status === 'completed' || !task.dueDate || !task.assigneeId) return;
+
+        const daysRemaining = getDaysRemaining(task.dueDate);
+        const existingNotification = notifications.find(
+          (n) =>
+            n.taskId === task.id &&
+            n.type === (daysRemaining < 0 ? 'task_overdue' : 'deadline_approaching') &&
+            n.daysRemaining === daysRemaining
+        );
+
+        if (existingNotification) return;
+
+        if (daysRemaining < 0) {
+          const overdueNotification: Omit<Notification, 'id' | 'createdAt'> = {
+            type: 'task_overdue',
+            taskId: task.id,
+            taskTitle: task.title,
+            userId: task.assigneeId,
+            read: false,
+            message: `任务已逾期 ${Math.abs(daysRemaining)} 天：${task.title}`,
+            daysRemaining,
+          };
+          const hasOverdueNotif = notifications.find(
+            (n) => n.taskId === task.id && n.type === 'task_overdue'
+          );
+          if (!hasOverdueNotif) {
+            set((state) => ({
+              notifications: [
+                { ...overdueNotification, id: generateId(), createdAt: new Date().toISOString() },
+                ...state.notifications,
+              ],
+            }));
+          }
+        } else if (daysRemaining <= 3) {
+          const approachingNotification: Omit<Notification, 'id' | 'createdAt'> = {
+            type: 'deadline_approaching',
+            taskId: task.id,
+            taskTitle: task.title,
+            userId: task.assigneeId,
+            read: false,
+            message: `任务即将到期（还剩 ${daysRemaining} 天）：${task.title}`,
+            daysRemaining,
+          };
+          const hasApproachingNotif = notifications.find(
+            (n) => n.taskId === task.id && n.type === 'deadline_approaching' && n.daysRemaining === daysRemaining
+          );
+          if (!hasApproachingNotif) {
+            set((state) => ({
+              notifications: [
+                { ...approachingNotification, id: generateId(), createdAt: new Date().toISOString() },
+                ...state.notifications,
+              ],
+            }));
+          }
+        }
+      });
+      persist();
+    },
 
     resetData: () => {
       localStorage.removeItem('funeral_planner_data');
@@ -228,6 +350,7 @@ export const useStore = create<AppState>((set, get) => {
         deceased: null,
         members: [],
         tasks: [],
+        notifications: [],
         currentUser: null,
         showSetup: true,
       });
@@ -241,6 +364,7 @@ export const useStore = create<AppState>((set, get) => {
           members: persisted.members,
           tasks: persisted.tasks,
           currentUser: persisted.currentUser,
+          notifications: persisted.notifications || [],
           showSetup: !persisted.deceased,
         });
       }

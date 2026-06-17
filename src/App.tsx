@@ -25,6 +25,7 @@ function App() {
     addMember,
     setShowSetup,
     setCurrentUser,
+    checkDeadlineNotifications,
   } = useStore();
 
   useEffect(() => {
@@ -33,6 +34,16 @@ function App() {
       setShowSetup(true);
     }
   }, [deceased, setShowSetup]);
+
+  useEffect(() => {
+    if (deceased) {
+      checkDeadlineNotifications();
+      const interval = setInterval(() => {
+        checkDeadlineNotifications();
+      }, 60 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [deceased, checkDeadlineNotifications]);
 
   const handleSetupComplete = (
     deceasedInfo: { name: string; birthDate: string; deathDate: string; relationship: string },

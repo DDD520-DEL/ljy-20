@@ -75,6 +75,20 @@ export interface GuideItem {
   tips?: string;
 }
 
+export type NotificationType = 'task_assigned' | 'deadline_approaching' | 'task_overdue';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  taskId: string;
+  taskTitle: string;
+  userId: string;
+  read: boolean;
+  createdAt: string;
+  message: string;
+  daysRemaining?: number;
+}
+
 export interface AppState {
   deceased: Deceased | null;
   members: FamilyMember[];

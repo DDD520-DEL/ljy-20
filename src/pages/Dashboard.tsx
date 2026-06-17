@@ -24,10 +24,25 @@ import {
   Feather,
   Calendar,
   Star,
+  Bell,
+  ChevronRight,
+  UserPlus as UserPlusIcon,
 } from 'lucide-react';
+import type { Notification } from '@/types';
 
 export const Dashboard = () => {
-  const { tasks, members, deceased, categories, setShowMemberModal, setActiveTab } = useStore();
+  const {
+    tasks,
+    members,
+    deceased,
+    categories,
+    currentUser,
+    notifications,
+    setShowMemberModal,
+    setActiveTab,
+    markNotificationRead,
+    setShowNotificationPanel,
+  } = useStore();
 
   const progress = calculateProgress(tasks);
   const statusCounts = getStatusCounts(tasks);
@@ -35,7 +50,46 @@ export const Dashboard = () => {
   const overdueTasks = getOverdueTasks(tasks);
   const unassignedTasks = getUnassignedTasks(tasks);
 
+  const userNotifications = currentUser
+    ? notifications.filter((n) => n.userId === currentUser.id)
+    : [];
+  const unreadNotifications = userNotifications.filter((n) => !n.read);
+  const hasUnread = unreadNotifications.length > 0;
+
   if (!deceased) return null;
+
+  const getNotificationIcon = (type: Notification['type']) => {
+    switch (type) {
+      case 'task_assigned':
+        return UserPlusIcon;
+      case 'deadline_approaching':
+        return Clock;
+      case 'task_overdue':
+        return AlertTriangle;
+      default:
+        return Bell;
+    }
+  };
+
+  const getNotificationColor = (type: Notification['type']) => {
+    switch (type) {
+      case 'task_assigned':
+        return 'border-primary-300 bg-primary-50 text-primary-700';
+      case 'deadline_approaching':
+        return 'border-gold-300 bg-gold-50 text-gold-700';
+      case 'task_overdue':
+        return 'border-red-300 bg-red-50 text-red-700';
+      default:
+        return 'border-slate-300 bg-slate-50 text-slate-700';
+    }
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.read) {
+      markNotificationRead(notification.id);
+    }
+    setActiveTab('tasks');
+  };
 
   const stats = [
     {
@@ -93,6 +147,53 @@ export const Dashboard = () => {
 
   return (
     <div className="animate-fade-in">
+      {hasUnread && (
+        <div className="mb-6 card border-l-4 border-l-primary-500 bg-gradient-to-r from-primary-50 to-white shadow-md animate-slide-up">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0">
+              <Bell className="w-6 h-6 text-primary-600 animate-bounce-slow" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-slate-800 font-serif flex items-center gap-2">
+                  您有 {unreadNotifications.length} 条未读提醒
+                  <span className="px-2 py-0.5 text-xs font-medium text-white bg-red-500 rounded-full">
+                    {unreadNotifications.length}
+                  </span>
+                </h3>
+                <button
+                  onClick={() => setShowNotificationPanel(true)}
+                  className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                >
+                  查看全部
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {unreadNotifications.slice(0, 3).map((notification) => {
+                  const Icon = getNotificationIcon(notification.type);
+                  const colorClass = getNotificationColor(notification.type);
+                  return (
+                    <button
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`w-full text-left p-3 rounded-lg border ${colorClass} hover:opacity-90 transition-opacity`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm font-medium truncate">
+                          {notification.message}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="card bg-gradient-to-br from-primary-800 to-primary-900 text-white lg:col-span-2">
           <div className="flex items-center justify-between">

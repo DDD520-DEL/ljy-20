@@ -56,6 +56,7 @@ export default {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "count-up": "countUp 0.6s ease-out",
         "ripple": "ripple 0.6s ease-out",
+        "bounce-slow": "bounceSlow 2s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -73,6 +74,10 @@ export default {
         ripple: {
           "0%": { transform: "scale(0)", opacity: "1" },
           "100%": { transform: "scale(2.5)", opacity: "0" },
+        },
+        bounceSlow: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-5px)" },
         },
       },
     },
