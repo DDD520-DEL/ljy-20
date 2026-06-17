@@ -17,8 +17,8 @@ function App() {
     deceased,
     currentUser,
     showSetup,
-    showAddTask,
-    showAssignTask,
+    showTaskModal,
+    showAssignModal,
     showMemberModal,
     activeTab,
     initializeFromTemplate,
@@ -91,8 +91,8 @@ function App() {
       </div>
 
       {showSetup && <SetupModal onComplete={handleSetupComplete} />}
-      {showAddTask && <AddTaskModal />}
-      {showAssignTask && <AssignTaskModal />}
+      {showTaskModal && <AddTaskModal />}
+      {showAssignModal && <AssignTaskModal />}
       {showMemberModal && <AddMemberModal />}
     </div>
   );

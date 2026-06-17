@@ -37,7 +37,7 @@ export const AssignTaskModal = () => {
   };
 
   const handleUnassign = () => {
-    if (!selectedTaskId) {
+    if (selectedTaskId) {
       unassignTask(selectedTaskId);
       setShowAssignModal(false);
     }
