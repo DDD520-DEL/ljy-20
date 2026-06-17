@@ -37,6 +37,7 @@ export interface Task {
   createdAt: string;
   completedAt?: string;
   notes?: Note[];
+  dependsOn?: string[];
 }
 
 export interface Note {

@@ -2,14 +2,18 @@ import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { TaskCategorySection } from '@/components/tasks/TaskCategory';
 import { TaskCard } from '@/components/tasks/TaskCard';
-import { Filter, Search, SortAsc, SortDesc, List, Grid3X3 } from 'lucide-react';
+import { Filter, Search, SortAsc, SortDesc, List, Grid3X3, Lock } from 'lucide-react';
 import type { TaskStatus } from '@/types';
+import { isTaskBlocked } from '@/utils/progressUtils';
 
-const statusFilters: { value: TaskStatus | 'all'; label: string }[] = [
+type StatusFilterValue = TaskStatus | 'all' | 'blocked';
+
+const statusFilters: { value: StatusFilterValue; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'pending', label: '待办' },
   { value: 'in-progress', label: '进行中' },
   { value: 'completed', label: '已完成' },
+  { value: 'blocked', label: '被阻塞' },
 ];
 
 const priorityFilters = [
@@ -21,7 +25,7 @@ const priorityFilters = [
 
 export const TaskList = () => {
   const { categories, tasks } = useStore();
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all');
   const [priorityFilter, setPriorityFilter] = useState<number>(0);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,7 +33,11 @@ export const TaskList = () => {
   const [viewMode, setViewMode] = useState<'list' | 'category'>('category');
 
   const filteredTasks = tasks.filter((task) => {
-    if (statusFilter !== 'all' && task.status !== statusFilter) return false;
+    if (statusFilter === 'blocked') {
+      if (!isTaskBlocked(task, tasks)) return false;
+    } else if (statusFilter !== 'all' && task.status !== statusFilter) {
+      return false;
+    }
     if (priorityFilter !== 0 && task.priority !== priorityFilter) return false;
     if (categoryFilter !== 'all' && task.categoryId !== categoryFilter) return false;
     if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -61,7 +69,7 @@ export const TaskList = () => {
           <div className="flex flex-wrap gap-2">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as TaskStatus | 'all')}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilterValue)}
               className="input-field w-auto min-w-[120px]"
             >
               {statusFilters.map((f) => (
@@ -135,6 +143,8 @@ export const TaskList = () => {
               const count =
                 f.value === 'all'
                   ? filteredTasks.length
+                  : f.value === 'blocked'
+                  ? filteredTasks.filter((t) => isTaskBlocked(t, tasks)).length
                   : filteredTasks.filter((t) => t.status === f.value).length;
               return (
                 <button
@@ -146,6 +156,7 @@ export const TaskList = () => {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
+                  {f.value === 'blocked' && <Lock className="w-3.5 h-3.5" />}
                   {f.label}
                   <span className="text-xs opacity-70">({count})</span>
                 </button>

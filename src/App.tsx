@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { SetupModal } from '@/components/common/SetupModal';
 import { AddTaskModal } from '@/components/tasks/AddTaskModal';
 import { AssignTaskModal } from '@/components/tasks/AssignTaskModal';
+import { DependencyModal } from '@/components/tasks/DependencyModal';
 import { AddMemberModal } from '@/components/members/AddMemberModal';
 import { Dashboard } from '@/pages/Dashboard';
 import { TaskList } from '@/pages/TaskList';
@@ -24,6 +25,7 @@ function App() {
     showSetup,
     showTaskModal,
     showAssignModal,
+    showDependencyModal,
     showMemberModal,
     activeTab,
     initializeFromTemplate,
@@ -124,6 +126,7 @@ function App() {
       {showSetup && <SetupModal onComplete={handleSetupComplete} />}
       {showTaskModal && <AddTaskModal />}
       {showAssignModal && <AssignTaskModal />}
+      {showDependencyModal && <DependencyModal />}
       {showMemberModal && <AddMemberModal />}
 
       {deceased && <ExportReport reportRef={reportRef} />}

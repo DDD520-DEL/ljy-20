@@ -3,7 +3,7 @@ import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notificati
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate } from '@/data/taskTemplate';
 import { saveToStorage, loadFromStorage } from '@/utils/storage';
-import { generateId, getDaysRemaining } from '@/utils/progressUtils';
+import { generateId, getDaysRemaining, isTaskBlocked } from '@/utils/progressUtils';
 
 interface AppState {
   deceased: Deceased | null;
@@ -17,7 +17,9 @@ interface AppState {
   showMemberModal: boolean;
   showTaskModal: boolean;
   showAssignModal: boolean;
+  showDependencyModal: boolean;
   selectedTaskId: string | null;
+  dependencyTaskId: string | null;
   activeTab: string;
 
   setDeceased: (deceased: Deceased) => void;
@@ -32,6 +34,8 @@ interface AppState {
   unassignTask: (taskId: string) => void;
   toggleTaskStatus: (taskId: string) => void;
   setTaskStatus: (taskId: string, status: TaskStatus) => void;
+  toggleTaskDependency: (taskId: string, dependsOnId: string) => void;
+  setShowDependencyModal: (show: boolean, taskId?: string | null) => void;
   addNote: (taskId: string, content: string, authorId: string, parentId?: string) => void;
   deleteNote: (taskId: string, noteId: string) => void;
   setShowSetup: (show: boolean) => void;
@@ -70,8 +74,10 @@ const getInitialState = () => {
       showMemberModal: false,
       showTaskModal: false,
       showAssignModal: false,
+      showDependencyModal: false,
       showNotificationPanel: false,
       selectedTaskId: null,
+      dependencyTaskId: null,
       activeTab: 'dashboard',
     };
   }
@@ -87,8 +93,10 @@ const getInitialState = () => {
     showMemberModal: false,
     showTaskModal: false,
     showAssignModal: false,
+    showDependencyModal: false,
     showNotificationPanel: false,
     selectedTaskId: null,
+    dependencyTaskId: null,
     activeTab: 'dashboard',
   };
 };
@@ -166,7 +174,13 @@ export const useStore = create<AppState>((set, get) => {
 
     deleteTask: (id) => {
       set((state) => ({
-        tasks: state.tasks.filter((t) => t.id !== id),
+        tasks: state.tasks
+          .filter((t) => t.id !== id)
+          .map((t) =>
+            t.dependsOn && t.dependsOn.includes(id)
+              ? { ...t, dependsOn: t.dependsOn.filter((depId) => depId !== id) }
+              : t
+          ),
       }));
       persist();
     },
@@ -211,6 +225,10 @@ export const useStore = create<AppState>((set, get) => {
         else if (task.status === 'in-progress') newStatus = 'completed';
         else newStatus = 'pending';
 
+        if (newStatus === 'in-progress' && isTaskBlocked(task, state.tasks)) {
+          return state;
+        }
+
         return {
           tasks: state.tasks.map((t) =>
             t.id === taskId
@@ -227,16 +245,38 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     setTaskStatus: (taskId, status) => {
+      set((state) => {
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (status === 'in-progress' && task && isTaskBlocked(task, state.tasks)) {
+          return state;
+        }
+        return {
+          tasks: state.tasks.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  status,
+                  completedAt: status === 'completed' ? new Date().toISOString() : undefined,
+                }
+              : t
+          ),
+        };
+      });
+      persist();
+    },
+
+    toggleTaskDependency: (taskId, dependsOnId) => {
       set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === taskId
-            ? {
-                ...t,
-                status,
-                completedAt: status === 'completed' ? new Date().toISOString() : undefined,
-              }
-            : t
-        ),
+        tasks: state.tasks.map((t) => {
+          if (t.id !== taskId) return t;
+          const deps = new Set(t.dependsOn || []);
+          if (deps.has(dependsOnId)) {
+            deps.delete(dependsOnId);
+          } else {
+            deps.add(dependsOnId);
+          }
+          return { ...t, dependsOn: Array.from(deps) };
+        }),
       }));
       persist();
     },
@@ -284,6 +324,8 @@ export const useStore = create<AppState>((set, get) => {
     setShowTaskModal: (show) => set({ showTaskModal: show }),
     setShowAssignModal: (show, taskId) =>
       set({ showAssignModal: show, selectedTaskId: taskId || null }),
+    setShowDependencyModal: (show, taskId) =>
+      set({ showDependencyModal: show, dependencyTaskId: taskId ?? null }),
     setShowNotificationPanel: (show) => set({ showNotificationPanel: show }),
     setActiveTab: (tab) => set({ activeTab: tab }),
 

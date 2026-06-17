@@ -69,6 +69,22 @@ export const getUnassignedTasks = (tasks: Task[]): Task[] => {
   return tasks.filter((t) => !t.assigneeId);
 };
 
+export const getBlockingTasks = (task: Task, tasks: Task[]): Task[] => {
+  if (!task.dependsOn || task.dependsOn.length === 0) return [];
+  return tasks.filter(
+    (t) => task.dependsOn!.includes(t.id) && t.status !== 'completed'
+  );
+};
+
+export const isTaskBlocked = (task: Task, tasks: Task[]): boolean => {
+  if (task.status === 'completed') return false;
+  return getBlockingTasks(task, tasks).length > 0;
+};
+
+export const getBlockedTasks = (tasks: Task[]): Task[] => {
+  return tasks.filter((t) => isTaskBlocked(t, tasks));
+};
+
 export const getOverdueTasks = (tasks: Task[]): Task[] => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

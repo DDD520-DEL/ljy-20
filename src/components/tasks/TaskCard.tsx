@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Clock, AlertTriangle, UserPlus, MoreVertical, Trash2, MessageCircle } from 'lucide-react';
+import { Check, Clock, AlertTriangle, UserPlus, MoreVertical, Trash2, MessageCircle, Link2, Lock } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import type { Task } from '@/types';
 import { MemberAvatar } from '@/components/members/MemberAvatar';
@@ -11,6 +11,8 @@ import {
   getPriorityColor,
   formatDateShort,
   getDaysRemaining,
+  isTaskBlocked,
+  getBlockingTasks,
 } from '@/utils/progressUtils';
 
 interface TaskCardProps {
@@ -26,10 +28,12 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
   const {
     members,
     categories,
+    tasks,
     toggleTaskStatus,
     setShowAssignModal,
     deleteTask,
     setTaskStatus,
+    setShowDependencyModal,
     currentUser,
   } = useStore();
 
@@ -39,6 +43,10 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
   const daysRemaining = task.dueDate ? getDaysRemaining(task.dueDate) : null;
   const isOverdue = daysRemaining !== null && daysRemaining < 0;
   const notesCount = task.notes?.length || 0;
+
+  const blockingTasks = getBlockingTasks(task, tasks);
+  const isBlocked = isTaskBlocked(task, tasks);
+  const dependsOnCount = task.dependsOn?.length || 0;
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -60,13 +68,19 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
     setShowMenu(false);
   };
 
+  const handleDependency = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDependencyModal(true, task.id);
+    setShowMenu(false);
+  };
+
   const cardClasses = `card ${
     task.status === 'completed'
       ? 'card-completed'
       : task.status === 'in-progress'
       ? 'card-in-progress animate-pulse-slow'
       : ''
-  }`;
+  } ${isBlocked ? 'card-blocked' : ''}`;
 
   return (
     <div className={cardClasses}>
@@ -113,6 +127,12 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
                 <span className={`badge ${getStatusClass(task.status)}`}>
                   {getStatusText(task.status)}
                 </span>
+                {isBlocked && (
+                  <span className="badge bg-purple-100 text-purple-700 flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    被阻塞
+                  </span>
+                )}
                 {showCategory && category && (
                   <span
                     className="badge"
@@ -126,6 +146,25 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
               <p className="text-sm text-slate-500 mt-1 line-clamp-2">
                 {task.description}
               </p>
+
+              {(blockingTasks.length > 0 || dependsOnCount > 0) && (
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  <button
+                    onClick={handleDependency}
+                    className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 hover:underline transition-colors"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    {blockingTasks.length > 0 ? (
+                      <span>
+                        等待 {blockingTasks.length} 个前置任务完成：
+                        {blockingTasks.map((bt) => bt.title).join('、')}
+                      </span>
+                    ) : (
+                      <span>已设置 {dependsOnCount} 个前置依赖（均已满足）</span>
+                    )}
+                  </button>
+                </div>
+              )}
 
               <div className="flex items-center gap-4 mt-3 flex-wrap">
                 {task.dueDate && (
@@ -234,6 +273,16 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
                     className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                   >
                     标记为已完成
+                  </button>
+                  <div className="border-t border-slate-200 my-1"></div>
+                  <button
+                    onClick={handleDependency}
+                    className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Link2 className="w-4 h-4" />
+                      依赖设置{dependsOnCount > 0 ? ` (${dependsOnCount})` : ''}
+                    </span>
                   </button>
                   <div className="border-t border-slate-200 my-1"></div>
                   <button

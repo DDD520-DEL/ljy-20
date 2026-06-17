@@ -8,6 +8,7 @@ import {
   getTodayTasks,
   getOverdueTasks,
   getUnassignedTasks,
+  getBlockedTasks,
   formatDate,
   getDaysRemaining,
 } from '@/utils/progressUtils';
@@ -27,6 +28,7 @@ import {
   Bell,
   ChevronRight,
   UserPlus as UserPlusIcon,
+  Lock,
 } from 'lucide-react';
 import type { Notification } from '@/types';
 
@@ -49,6 +51,7 @@ export const Dashboard = () => {
   const todayTasks = getTodayTasks(tasks);
   const overdueTasks = getOverdueTasks(tasks);
   const unassignedTasks = getUnassignedTasks(tasks);
+  const blockedTasks = getBlockedTasks(tasks);
 
   const userNotifications = currentUser
     ? notifications.filter((n) => n.userId === currentUser.id)
@@ -127,6 +130,15 @@ export const Dashboard = () => {
       icon: AlertTriangle,
       bgColor: 'bg-red-50',
       borderColor: 'border-red-200',
+    },
+    {
+      label: '被阻塞',
+      value: blockedTasks.length,
+      total: statusCounts.total,
+      color: '#7e57c2',
+      icon: Lock,
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
     },
   ];
 
@@ -235,7 +247,7 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -246,12 +258,12 @@ export const Dashboard = () => {
             >
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: stat.color + '20' }}
                 >
                   <Icon className="w-5 h-5" style={{ color: stat.color }} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-2xl font-bold" style={{ color: stat.color }}>
                     {stat.value}
                     <span className="text-sm text-slate-400 font-normal">/{stat.total}</span>
@@ -303,6 +315,25 @@ export const Dashboard = () => {
               </h3>
               <div className="space-y-3">
                 {overdueTasks.slice(0, 3).map((task, index) => (
+                  <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-slide-up">
+                    <TaskCard task={task} showCategory />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {blockedTasks.length > 0 && (
+            <div className="card border-purple-200 bg-purple-50/50">
+              <h3 className="font-semibold text-purple-700 font-serif flex items-center gap-2 mb-4">
+                <Lock className="w-5 h-5" />
+                被阻塞 ({blockedTasks.length})
+              </h3>
+              <p className="text-sm text-purple-600 mb-4">
+                以下任务存在未完成的前置依赖，暂无法开始。
+              </p>
+              <div className="space-y-3">
+                {blockedTasks.slice(0, 5).map((task, index) => (
                   <div key={task.id} style={{ animationDelay: `${index * 50}ms` }} className="animate-slide-up">
                     <TaskCard task={task} showCategory />
                   </div>
