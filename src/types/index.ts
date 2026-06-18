@@ -98,3 +98,23 @@ export interface AppState {
   categories: TaskCategory[];
   currentUser: FamilyMember | null;
 }
+
+export interface TemplateTaskItem {
+  id: string;
+  title: string;
+  description: string;
+  categoryId: string;
+  priority: 1 | 2 | 3;
+  dueDays?: number;
+  order: number;
+}
+
+export interface SavedTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  tasks: TemplateTaskItem[];
+  createdAt: string;
+  updatedAt: string;
+  isDefault?: boolean;
+}

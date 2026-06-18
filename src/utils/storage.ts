@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'funeral_planner_data';
+const TEMPLATES_STORAGE_KEY = 'funeral_planner_templates';
 
 export const saveToStorage = (data: unknown): void => {
   try {
@@ -23,5 +24,31 @@ export const clearStorage = (): void => {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.error('Failed to clear localStorage:', error);
+  }
+};
+
+export const saveTemplatesToStorage = (templates: unknown): void => {
+  try {
+    localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+  } catch (error) {
+    console.error('Failed to save templates to localStorage:', error);
+  }
+};
+
+export const loadTemplatesFromStorage = <T>(): T | null => {
+  try {
+    const data = localStorage.getItem(TEMPLATES_STORAGE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('Failed to load templates from localStorage:', error);
+    return null;
+  }
+};
+
+export const clearTemplatesStorage = (): void => {
+  try {
+    localStorage.removeItem(TEMPLATES_STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear templates storage:', error);
   }
 };

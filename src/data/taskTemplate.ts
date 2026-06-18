@@ -1,4 +1,4 @@
-import type { Task } from '@/types';
+import type { Task, TemplateTaskItem, SavedTemplate } from '@/types';
 
 export interface TaskTemplate {
   title: string;
@@ -179,13 +179,48 @@ export const taskTemplates: TaskTemplate[] = [
   },
 ];
 
+export const DEFAULT_TEMPLATE_ID = 'default-template';
+
+export const getDefaultTemplate = (): SavedTemplate => {
+  const now = new Date().toISOString();
+  return {
+    id: DEFAULT_TEMPLATE_ID,
+    name: '系统默认模板',
+    description: '包含身后事办理所需的全部标准任务',
+    tasks: taskTemplates.map((tpl, index) => ({
+      id: `default-task-${index}`,
+      title: tpl.title,
+      description: tpl.description,
+      categoryId: tpl.categoryId,
+      priority: tpl.priority,
+      dueDays: tpl.dueDays,
+      order: index,
+    })),
+    createdAt: now,
+    updatedAt: now,
+    isDefault: true,
+  };
+};
+
 export const createTasksFromTemplate = (
   deceasedId: string,
-  deathDate: string
+  deathDate: string,
+  templateTasks?: TemplateTaskItem[]
 ): Omit<Task, 'id' | 'createdAt'>[] => {
   const death = new Date(deathDate);
+  const tasks = templateTasks || taskTemplates.map((tpl, index) => ({
+    id: `default-${index}`,
+    title: tpl.title,
+    description: tpl.description,
+    categoryId: tpl.categoryId,
+    priority: tpl.priority,
+    dueDays: tpl.dueDays,
+    order: index,
+  }));
 
-  return taskTemplates.map((template) => ({
+  const sortedTasks = [...tasks].sort((a, b) => a.order - b.order);
+
+  return sortedTasks.map((template) => ({
     title: template.title,
     description: template.description,
     categoryId: template.categoryId,

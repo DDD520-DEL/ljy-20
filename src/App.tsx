@@ -14,6 +14,7 @@ import { ExportReport } from '@/components/export/ExportReport';
 import { useStore } from '@/store/useStore';
 import { generateId } from '@/utils/progressUtils';
 import { exportToPdf } from '@/utils/exportPdf';
+import type { TemplateTaskItem } from '@/types';
 
 function App() {
   const reportRef = useRef<HTMLDivElement>(null);
@@ -21,7 +22,6 @@ function App() {
 
   const {
     deceased,
-    currentUser,
     showSetup,
     showTaskModal,
     showAssignModal,
@@ -69,7 +69,8 @@ function App() {
 
   const handleSetupComplete = (
     deceasedInfo: { name: string; birthDate: string; deathDate: string; relationship: string },
-    currentUserInfo: { name: string; role: string }
+    currentUserInfo: { name: string; role: string },
+    templateTasks: TemplateTaskItem[]
   ) => {
     const deceasedData = {
       id: generateId(),
@@ -89,7 +90,7 @@ function App() {
 
     addMember(newMember);
     setCurrentUser(newMember);
-    initializeFromTemplate(deceasedData);
+    initializeFromTemplate(deceasedData, templateTasks);
     localStorage.setItem('funeral_planner_initialized', 'true');
     setShowSetup(false);
   };

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem } from '@/types';
 import { categories } from '@/data/categories';
-import { createTasksFromTemplate } from '@/data/taskTemplate';
-import { saveToStorage, loadFromStorage } from '@/utils/storage';
+import { createTasksFromTemplate, getDefaultTemplate, DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
+import { saveToStorage, loadFromStorage, saveTemplatesToStorage, loadTemplatesFromStorage } from '@/utils/storage';
 import { generateId, getDaysRemaining, isTaskBlocked } from '@/utils/progressUtils';
 
 interface AppState {
@@ -21,12 +21,13 @@ interface AppState {
   selectedTaskId: string | null;
   dependencyTaskId: string | null;
   activeTab: string;
+  savedTemplates: SavedTemplate[];
 
   setDeceased: (deceased: Deceased) => void;
   addMember: (member: Omit<FamilyMember, 'id'>) => void;
   removeMember: (id: string) => void;
   setCurrentUser: (member: FamilyMember) => void;
-  initializeFromTemplate: (deceased: Deceased) => void;
+  initializeFromTemplate: (deceased: Deceased, templateTasks?: TemplateTaskItem[]) => void;
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -50,6 +51,10 @@ interface AppState {
   checkDeadlineNotifications: () => void;
   resetData: () => void;
   loadFromLocalStorage: () => void;
+  saveTemplate: (name: string, description: string, tasks: TemplateTaskItem[]) => SavedTemplate;
+  deleteTemplate: (templateId: string) => void;
+  updateTemplate: (templateId: string, updates: Partial<SavedTemplate>) => void;
+  loadSavedTemplates: () => void;
 }
 
 interface PersistedData {
@@ -60,8 +65,22 @@ interface PersistedData {
   notifications: Notification[];
 }
 
+const getInitialSavedTemplates = (): SavedTemplate[] => {
+  const persistedTemplates = loadTemplatesFromStorage<SavedTemplate[]>();
+  const defaultTemplate = getDefaultTemplate();
+  if (persistedTemplates && Array.isArray(persistedTemplates)) {
+    const hasDefault = persistedTemplates.some((t) => t.id === DEFAULT_TEMPLATE_ID);
+    if (!hasDefault) {
+      return [defaultTemplate, ...persistedTemplates];
+    }
+    return persistedTemplates;
+  }
+  return [defaultTemplate];
+};
+
 const getInitialState = () => {
   const persisted = loadFromStorage<PersistedData>();
+  const savedTemplates = getInitialSavedTemplates();
   if (persisted) {
     return {
       deceased: persisted.deceased,
@@ -79,6 +98,7 @@ const getInitialState = () => {
       selectedTaskId: null,
       dependencyTaskId: null,
       activeTab: 'dashboard',
+      savedTemplates,
     };
   }
 
@@ -98,6 +118,7 @@ const getInitialState = () => {
     selectedTaskId: null,
     dependencyTaskId: null,
     activeTab: 'dashboard',
+    savedTemplates,
   };
 };
 
@@ -105,6 +126,12 @@ export const useStore = create<AppState>((set, get) => {
   const persist = () => {
     const { deceased, members, tasks, currentUser, notifications } = get();
     saveToStorage({ deceased, members, tasks, currentUser, notifications });
+  };
+
+  const persistTemplates = () => {
+    const { savedTemplates } = get();
+    const templatesToSave = savedTemplates.filter((t) => !t.isDefault);
+    saveTemplatesToStorage(templatesToSave);
   };
 
   return {
@@ -142,8 +169,8 @@ export const useStore = create<AppState>((set, get) => {
       persist();
     },
 
-    initializeFromTemplate: (deceased) => {
-      const taskData = createTasksFromTemplate(deceased.id, deceased.deathDate);
+    initializeFromTemplate: (deceased, templateTasks) => {
+      const taskData = createTasksFromTemplate(deceased.id, deceased.deathDate, templateTasks);
       const tasks: Task[] = taskData.map((t) => ({
         ...t,
         id: generateId(),
@@ -424,6 +451,47 @@ export const useStore = create<AppState>((set, get) => {
         }
       });
       persist();
+    },
+
+    saveTemplate: (name, description, tasks) => {
+      const now = new Date().toISOString();
+      const newTemplate: SavedTemplate = {
+        id: generateId(),
+        name,
+        description,
+        tasks,
+        createdAt: now,
+        updatedAt: now,
+      };
+      set((state) => ({
+        savedTemplates: [...state.savedTemplates, newTemplate],
+      }));
+      persistTemplates();
+      return newTemplate;
+    },
+
+    deleteTemplate: (templateId) => {
+      set((state) => ({
+        savedTemplates: state.savedTemplates.filter(
+          (t) => t.id !== templateId || t.isDefault
+        ),
+      }));
+      persistTemplates();
+    },
+
+    updateTemplate: (templateId, updates) => {
+      set((state) => ({
+        savedTemplates: state.savedTemplates.map((t) =>
+          t.id === templateId && !t.isDefault
+            ? { ...t, ...updates, updatedAt: new Date().toISOString() }
+            : t
+        ),
+      }));
+      persistTemplates();
+    },
+
+    loadSavedTemplates: () => {
+      set({ savedTemplates: getInitialSavedTemplates() });
     },
 
     resetData: () => {
