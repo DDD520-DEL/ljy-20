@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { generateId } from '@/utils/progressUtils';
 import { Heart, Calendar, User, ArrowRight, ArrowLeft, FileText, Trash2, Save, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -24,9 +24,13 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
     savedTemplates,
     saveTemplate,
     deleteTemplate,
+    members,
+    currentUser,
   } = useStore();
 
-  const [step, setStep] = useState(1);
+  const isAddMode = members.length > 0 && currentUser !== null;
+
+  const [step, setStep] = useState(isAddMode ? 1 : 1);
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [deathDate, setDeathDate] = useState('');
@@ -41,6 +45,23 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
   const [saveTemplateDesc, setSaveTemplateDesc] = useState('');
   const [showSaveTemplateForm, setShowSaveTemplateForm] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
+
+  useEffect(() => {
+    if (showSetup) {
+      setStep(isAddMode ? 1 : 1);
+      setName('');
+      setBirthDate('');
+      setDeathDate('');
+      setRelationship('');
+      setMemberName(currentUser?.name || '');
+      setMemberRole(currentUser?.role || '');
+      setSelectedTemplateId(DEFAULT_TEMPLATE_ID);
+      setCustomTasks([]);
+      setShowTemplateList(true);
+      setShowSaveTemplateForm(false);
+      setTemplateSaved(false);
+    }
+  }, [showSetup, isAddMode, currentUser]);
 
   const selectedTemplate = useMemo(
     () => savedTemplates.find((t) => t.id === selectedTemplateId),
@@ -77,9 +98,24 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
   };
 
   const handleSubmit = () => {
-    if (!name.trim() || !birthDate || !deathDate || !relationship || !memberName.trim()) return;
+    if (!name.trim() || !birthDate || !deathDate || !relationship) return;
+    if (!isAddMode && !memberName.trim()) return;
     if (customTasks.length === 0) {
       alert('任务列表不能为空，请至少添加一个任务。');
+      return;
+    }
+
+    const deceasedData = {
+      id: generateId(),
+      name: name.trim(),
+      birthDate,
+      deathDate,
+      relationship: relationship.trim(),
+    };
+
+    if (isAddMode) {
+      initializeFromTemplate(deceasedData, customTasks);
+      setShowSetup(false);
       return;
     }
 
@@ -90,14 +126,6 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
         customTasks
       );
     } else {
-      const deceased = {
-        id: generateId(),
-        name: name.trim(),
-        birthDate,
-        deathDate,
-        relationship: relationship.trim(),
-      };
-
       const memberId = generateId();
       const newMember = {
         id: memberId,
@@ -108,15 +136,43 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
 
       addMember(newMember);
       setCurrentUser(newMember);
-      initializeFromTemplate(deceased, customTasks);
+      initializeFromTemplate(deceasedData, customTasks);
       localStorage.setItem('funeral_planner_initialized', 'true');
       setShowSetup(false);
     }
   };
 
   const canProceedStep1 = name.trim() && birthDate && deathDate && relationship;
-  const canProceedStep2 = memberName.trim();
+  const canProceedStep2 = isAddMode ? true : memberName.trim();
   const canProceedStep3 = customTasks.length > 0;
+
+  const totalSteps = isAddMode ? 2 : 3;
+
+  const handleNextFromStep1 = () => {
+    if (!canProceedStep1) return;
+    if (isAddMode) {
+      setStep(2);
+      if (!selectedTemplate || customTasks.length === 0) {
+        const defaultTemplate = savedTemplates.find((t) => t.id === DEFAULT_TEMPLATE_ID);
+        if (defaultTemplate) {
+          setCustomTasks([...defaultTemplate.tasks]);
+        }
+      }
+    } else {
+      setStep(2);
+    }
+  };
+
+  const handleNextFromStep2 = () => {
+    if (!canProceedStep2) return;
+    setStep(isAddMode ? 2 : 3);
+    if (!isAddMode && (!selectedTemplate || customTasks.length === 0)) {
+      const defaultTemplate = savedTemplates.find((t) => t.id === DEFAULT_TEMPLATE_ID);
+      if (defaultTemplate) {
+        setCustomTasks([...defaultTemplate.tasks]);
+      }
+    }
+  };
 
   if (!showSetup) return null;
 
@@ -128,19 +184,25 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
 
       <div className="relative w-full max-w-3xl my-8 animate-fade-in">
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          <div className="bg-gradient-to-r from-primary-700 to-primary-900 p-8 text-center">
+          <div className="bg-gradient-to-r from-primary-700 to-primary-900 p-8 text-center relative">
+            <button
+              onClick={() => setShowSetup(false)}
+              className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors text-sm"
+            >
+              取消
+            </button>
             <div className="w-20 h-20 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
               <Heart className="w-10 h-10 text-gold-400" />
             </div>
             <h2 className="text-2xl font-semibold text-white font-serif">
-              身后事事务清单
+              {isAddMode ? '添加新逝者' : '身后事事务清单'}
             </h2>
             <p className="text-primary-200 mt-2">温暖陪伴 · 有序前行</p>
           </div>
 
           <div className="p-8">
             <div className="flex items-center justify-center gap-4 mb-8">
-              {[1, 2, 3].map((s) => (
+              {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s, idx, arr) => (
                 <div key={s} className="flex items-center">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
@@ -149,9 +211,9 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
                         : 'bg-slate-100 text-slate-400'
                     }`}
                   >
-                    {s}
+                    {isAddMode ? (s === 2 ? 2 : s) : s}
                   </div>
-                  {s < 3 && (
+                  {idx < arr.length - 1 && (
                     <div
                       className={`w-16 h-1 transition-all ${
                         step > s ? 'bg-primary-600' : 'bg-slate-200'
@@ -232,7 +294,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
                 </div>
 
                 <button
-                  onClick={() => canProceedStep1 && setStep(2)}
+                  onClick={handleNextFromStep1}
                   disabled={!canProceedStep1}
                   className="w-full btn-primary flex items-center justify-center gap-2 mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -242,7 +304,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
               </div>
             )}
 
-            {step === 2 && (
+            {step === 2 && !isAddMode && (
               <div className="space-y-4 animate-fade-in">
                 <h3 className="text-lg font-semibold text-slate-800 font-serif mb-4">
                   您的信息
@@ -293,17 +355,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
                     上一步
                   </button>
                   <button
-                    onClick={() => {
-                      if (canProceedStep2) {
-                        setStep(3);
-                        if (!selectedTemplate || customTasks.length === 0) {
-                          const defaultTemplate = savedTemplates.find((t) => t.id === DEFAULT_TEMPLATE_ID);
-                          if (defaultTemplate) {
-                            setCustomTasks([...defaultTemplate.tasks]);
-                          }
-                        }
-                      }
-                    }}
+                    onClick={handleNextFromStep2}
                     disabled={!canProceedStep2}
                     className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -314,7 +366,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
               </div>
             )}
 
-            {step === 3 && (
+            {(step === 3 || (step === 2 && isAddMode)) && (
               <div className="space-y-4 animate-fade-in">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-lg font-semibold text-slate-800 font-serif">
@@ -489,7 +541,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
 
                 <div className="flex gap-3 mt-6 pt-4 border-t border-slate-200">
                   <button
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep(isAddMode ? 1 : 2)}
                     className="btn-secondary flex-1 flex items-center justify-center gap-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -501,7 +553,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
                     className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    开始使用
+                    {isAddMode ? '创建事务空间' : '开始使用'}
                   </button>
                 </div>
               </div>

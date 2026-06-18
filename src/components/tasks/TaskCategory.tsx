@@ -18,7 +18,7 @@ interface TaskCategoryProps {
 
 export const TaskCategorySection = ({ category }: TaskCategoryProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const { tasks } = useStore();
+  const { activeTasks: tasks } = useStore();
 
   const categoryTasks = tasks.filter((t) => t.categoryId === category.id);
   const progress = getCategoryProgress(tasks, category.id);

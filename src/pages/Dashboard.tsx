@@ -35,7 +35,7 @@ import type { Notification } from '@/types';
 
 export const Dashboard = () => {
   const {
-    tasks,
+    activeTasks: tasks,
     members,
     deceased,
     categories,

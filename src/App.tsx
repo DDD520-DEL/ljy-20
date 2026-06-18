@@ -12,9 +12,7 @@ import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
 import { ExportReport } from '@/components/export/ExportReport';
 import { useStore } from '@/store/useStore';
-import { generateId } from '@/utils/progressUtils';
 import { exportToPdf } from '@/utils/exportPdf';
-import type { TemplateTaskItem } from '@/types';
 
 function App() {
   const reportRef = useRef<HTMLDivElement>(null);
@@ -22,16 +20,13 @@ function App() {
 
   const {
     deceased,
+    deceaseds,
     showSetup,
     showTaskModal,
     showAssignModal,
     showDependencyModal,
     showMemberModal,
     activeTab,
-    initializeFromTemplate,
-    addMember,
-    setShowSetup,
-    setCurrentUser,
     checkDeadlineNotifications,
     checkMemorialAnniversaries,
   } = useStore();
@@ -52,14 +47,16 @@ function App() {
   };
 
   useEffect(() => {
-    const hasInitialized = localStorage.getItem('funeral_planner_initialized');
-    if (!deceased && !hasInitialized) {
-      setShowSetup(true);
+    if (deceaseds.length === 0 && !showSetup) {
+      const hasInitialized = localStorage.getItem('funeral_planner_initialized');
+      if (!hasInitialized) {
+        useStore.getState().setShowSetup(true);
+      }
     }
-  }, [deceased, setShowSetup]);
+  }, [deceaseds.length, showSetup]);
 
   useEffect(() => {
-    if (deceased) {
+    if (deceaseds.length > 0) {
       checkDeadlineNotifications();
       checkMemorialAnniversaries();
       const interval = setInterval(() => {
@@ -68,37 +65,12 @@ function App() {
       }, 60 * 60 * 1000);
       return () => clearInterval(interval);
     }
-  }, [deceased, checkDeadlineNotifications, checkMemorialAnniversaries]);
-
-  const handleSetupComplete = (
-    deceasedInfo: { name: string; birthDate: string; deathDate: string; relationship: string },
-    currentUserInfo: { name: string; role: string },
-    templateTasks: TemplateTaskItem[]
-  ) => {
-    const deceasedData = {
-      id: generateId(),
-      name: deceasedInfo.name,
-      birthDate: deceasedInfo.birthDate,
-      deathDate: deceasedInfo.deathDate,
-      relationship: deceasedInfo.relationship,
-    };
-
-    const memberId = generateId();
-    const newMember = {
-      id: memberId,
-      name: currentUserInfo.name,
-      role: currentUserInfo.role || '家庭成员',
-      color: '#3f51b5',
-    };
-
-    addMember(newMember);
-    setCurrentUser(newMember);
-    initializeFromTemplate(deceasedData, templateTasks);
-    localStorage.setItem('funeral_planner_initialized', 'true');
-    setShowSetup(false);
-  };
+  }, [deceaseds.length, checkDeadlineNotifications, checkMemorialAnniversaries]);
 
   const renderContent = () => {
+    if (!deceased) {
+      return null;
+    }
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard />;
@@ -127,7 +99,7 @@ function App() {
         </div>
       </div>
 
-      {showSetup && <SetupModal onComplete={handleSetupComplete} />}
+      {showSetup && <SetupModal />}
       {showTaskModal && <AddTaskModal />}
       {showAssignModal && <AssignTaskModal />}
       {showDependencyModal && <DependencyModal />}

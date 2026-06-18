@@ -6,7 +6,7 @@ import { getUnassignedTasks, getMemberTaskCount, getMemberProgress } from '@/uti
 import { Users, UserPlus, PieChart, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 
 export const Collaboration = () => {
-  const { members, tasks, setShowMemberModal, setShowAssignModal } = useStore();
+  const { members, activeTasks: tasks, setShowMemberModal, setShowAssignModal } = useStore();
 
   const unassignedTasks = getUnassignedTasks(tasks);
 

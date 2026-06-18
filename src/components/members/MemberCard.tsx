@@ -9,7 +9,7 @@ interface MemberCardProps {
 }
 
 export const MemberCard = ({ member }: MemberCardProps) => {
-  const { tasks, removeMember, currentUser, setCurrentUser } = useStore();
+  const { activeTasks: tasks, removeMember, currentUser, setCurrentUser } = useStore();
 
   const taskCount = getMemberTaskCount(tasks, member.id);
   const progress = getMemberProgress(tasks, member.id);

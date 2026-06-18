@@ -6,7 +6,8 @@ import { saveToStorage, loadFromStorage, saveTemplatesToStorage, loadTemplatesFr
 import { generateId, getDaysRemaining, isTaskBlocked, getTodayMemorialNodes, getMemorialTaskTitle, getMemorialTaskDescription } from '@/utils/progressUtils';
 
 interface AppState {
-  deceased: Deceased | null;
+  deceaseds: Deceased[];
+  activeDeceasedId: string | null;
   members: FamilyMember[];
   tasks: Task[];
   categories: TaskCategory[];
@@ -22,9 +23,15 @@ interface AppState {
   dependencyTaskId: string | null;
   activeTab: string;
   savedTemplates: SavedTemplate[];
-  generatedMemorialTasks: Record<MemorialNodeType, boolean>;
+  generatedMemorialTasks: Record<string, Record<MemorialNodeType, boolean>>;
 
-  setDeceased: (deceased: Deceased) => void;
+  deceased: Deceased | null;
+  activeTasks: Task[];
+  activeGeneratedMemorialTasks: Record<MemorialNodeType, boolean>;
+
+  addDeceased: (deceased: Deceased, templateTasks?: TemplateTaskItem[]) => void;
+  switchDeceased: (deceasedId: string) => void;
+  deleteDeceased: (deceasedId: string) => void;
   addMember: (member: Omit<FamilyMember, 'id'>) => void;
   removeMember: (id: string) => void;
   setCurrentUser: (member: FamilyMember) => void;
@@ -60,12 +67,13 @@ interface AppState {
 }
 
 interface PersistedData {
-  deceased: Deceased | null;
+  deceaseds: Deceased[];
+  activeDeceasedId: string | null;
   members: FamilyMember[];
   tasks: Task[];
   currentUser: FamilyMember | null;
   notifications: Notification[];
-  generatedMemorialTasks: Record<MemorialNodeType, boolean>;
+  generatedMemorialTasks: Record<string, Record<MemorialNodeType, boolean>>;
 }
 
 const getInitialSavedTemplates = (): SavedTemplate[] => {
@@ -81,7 +89,9 @@ const getInitialSavedTemplates = (): SavedTemplate[] => {
   return [defaultTemplate];
 };
 
-const getInitialGeneratedMemorialTasks = (): Record<MemorialNodeType, boolean> => ({
+const getInitialGeneratedMemorialTasks = (): Record<string, Record<MemorialNodeType, boolean>> => ({});
+
+const getEmptyGeneratedMemorialTasks = (): Record<MemorialNodeType, boolean> => ({
   first7: false,
   third7: false,
   fifth7: false,
@@ -91,19 +101,55 @@ const getInitialGeneratedMemorialTasks = (): Record<MemorialNodeType, boolean> =
   thirdYear: false,
 });
 
-const getInitialState = () => {
-  const persisted = loadFromStorage<PersistedData>();
-  const savedTemplates = getInitialSavedTemplates();
-  if (persisted) {
+const migrateOldData = (persisted: any): PersistedData | null => {
+  if (!persisted) return null;
+
+  if ('deceaseds' in persisted && Array.isArray(persisted.deceaseds)) {
+    return persisted as PersistedData;
+  }
+
+  if ('deceased' in persisted && persisted.deceased) {
+    const oldDeceased: Deceased = persisted.deceased;
     return {
-      deceased: persisted.deceased,
+      deceaseds: [oldDeceased],
+      activeDeceasedId: oldDeceased.id,
+      members: persisted.members || [],
+      tasks: persisted.tasks || [],
+      currentUser: persisted.currentUser || null,
+      notifications: persisted.notifications || [],
+      generatedMemorialTasks: {
+        [oldDeceased.id]: persisted.generatedMemorialTasks || getEmptyGeneratedMemorialTasks(),
+      },
+    };
+  }
+
+  return null;
+};
+
+const getInitialState = () => {
+  const persistedRaw = loadFromStorage<any>();
+  const persisted = migrateOldData(persistedRaw);
+  const savedTemplates = getInitialSavedTemplates();
+
+  if (persisted) {
+    const activeDeceased = persisted.deceaseds.find((d) => d.id === persisted.activeDeceasedId) || null;
+    return {
+      deceaseds: persisted.deceaseds,
+      activeDeceasedId: persisted.activeDeceasedId,
+      deceased: activeDeceased,
       members: persisted.members,
       tasks: persisted.tasks,
+      activeTasks: activeDeceased
+        ? persisted.tasks.filter((t) => t.deceasedId === activeDeceased.id)
+        : [],
       currentUser: persisted.currentUser,
       notifications: persisted.notifications || [],
       generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
+      activeGeneratedMemorialTasks: activeDeceased
+        ? (persisted.generatedMemorialTasks || {})[activeDeceased.id] || getEmptyGeneratedMemorialTasks()
+        : getEmptyGeneratedMemorialTasks(),
       categories,
-      showSetup: !persisted.deceased,
+      showSetup: persisted.deceaseds.length === 0,
       showMemberModal: false,
       showTaskModal: false,
       showAssignModal: false,
@@ -117,11 +163,15 @@ const getInitialState = () => {
   }
 
   return {
+    deceaseds: [],
+    activeDeceasedId: null,
     deceased: null,
     members: [],
     tasks: [],
+    activeTasks: [],
     notifications: [],
     generatedMemorialTasks: getInitialGeneratedMemorialTasks(),
+    activeGeneratedMemorialTasks: getEmptyGeneratedMemorialTasks(),
     categories,
     currentUser: null,
     showSetup: true,
@@ -139,8 +189,8 @@ const getInitialState = () => {
 
 export const useStore = create<AppState>((set, get) => {
   const persist = () => {
-    const { deceased, members, tasks, currentUser, notifications, generatedMemorialTasks } = get();
-    saveToStorage({ deceased, members, tasks, currentUser, notifications, generatedMemorialTasks });
+    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks } = get();
+    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks });
   };
 
   const persistTemplates = () => {
@@ -149,11 +199,82 @@ export const useStore = create<AppState>((set, get) => {
     saveTemplatesToStorage(templatesToSave);
   };
 
+  const computeDerived = (state: Partial<AppState>): Partial<AppState> => {
+    const deceaseds = state.deceaseds ?? get().deceaseds;
+    const activeDeceasedId = state.activeDeceasedId ?? get().activeDeceasedId;
+    const tasks = state.tasks ?? get().tasks;
+    const generatedMemorialTasks = state.generatedMemorialTasks ?? get().generatedMemorialTasks;
+
+    const activeDeceased = deceaseds.find((d) => d.id === activeDeceasedId) || null;
+    return {
+      deceased: activeDeceased,
+      activeTasks: activeDeceased ? tasks.filter((t) => t.deceasedId === activeDeceased.id) : [],
+      activeGeneratedMemorialTasks: activeDeceased
+        ? generatedMemorialTasks[activeDeceased.id] || getEmptyGeneratedMemorialTasks()
+        : getEmptyGeneratedMemorialTasks(),
+    };
+  };
+
   return {
     ...getInitialState(),
 
-    setDeceased: (deceased) => {
-      set({ deceased, showSetup: false });
+    addDeceased: (deceased, templateTasks) => {
+      const taskData = templateTasks
+        ? createTasksFromTemplate(deceased.id, deceased.deathDate, templateTasks)
+        : [];
+      const newTasks: Task[] = taskData.map((t) => ({
+        ...t,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+      }));
+
+      set((state) => {
+        const newState = {
+          deceaseds: [...state.deceaseds, deceased],
+          activeDeceasedId: deceased.id,
+          tasks: [...state.tasks, ...newTasks],
+          generatedMemorialTasks: {
+            ...state.generatedMemorialTasks,
+            [deceased.id]: getEmptyGeneratedMemorialTasks(),
+          },
+          showSetup: false,
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    switchDeceased: (deceasedId) => {
+      set((state) => {
+        const newState = { activeDeceasedId: deceasedId };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    deleteDeceased: (deceasedId) => {
+      set((state) => {
+        const newDeceaseds = state.deceaseds.filter((d) => d.id !== deceasedId);
+        const newTasks = state.tasks.filter((t) => t.deceasedId !== deceasedId);
+        const newGeneratedMemorialTasks = { ...state.generatedMemorialTasks };
+        delete newGeneratedMemorialTasks[deceasedId];
+
+        const newActiveId =
+          state.activeDeceasedId === deceasedId
+            ? newDeceaseds.length > 0
+              ? newDeceaseds[0].id
+              : null
+            : state.activeDeceasedId;
+
+        const newState = {
+          deceaseds: newDeceaseds,
+          tasks: newTasks,
+          activeDeceasedId: newActiveId,
+          generatedMemorialTasks: newGeneratedMemorialTasks,
+          showSetup: newDeceaseds.length === 0,
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
 
@@ -185,14 +306,7 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     initializeFromTemplate: (deceased, templateTasks) => {
-      const taskData = createTasksFromTemplate(deceased.id, deceased.deathDate, templateTasks);
-      const tasks: Task[] = taskData.map((t) => ({
-        ...t,
-        id: generateId(),
-        createdAt: new Date().toISOString(),
-      }));
-      set({ deceased, tasks, showSetup: false });
-      persist();
+      get().addDeceased(deceased, templateTasks);
     },
 
     addTask: (task) => {
@@ -201,29 +315,38 @@ export const useStore = create<AppState>((set, get) => {
         id: generateId(),
         createdAt: new Date().toISOString(),
       };
-      set((state) => ({ tasks: [...state.tasks, newTask] }));
+      set((state) => {
+        const newState = { tasks: [...state.tasks, newTask] };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
 
     updateTask: (id, updates) => {
-      set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === id ? { ...t, ...updates } : t
-        ),
-      }));
+      set((state) => {
+        const newState = {
+          tasks: state.tasks.map((t) =>
+            t.id === id ? { ...t, ...updates } : t
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
 
     deleteTask: (id) => {
-      set((state) => ({
-        tasks: state.tasks
-          .filter((t) => t.id !== id)
-          .map((t) =>
-            t.dependsOn && t.dependsOn.includes(id)
-              ? { ...t, dependsOn: t.dependsOn.filter((depId) => depId !== id) }
-              : t
-          ),
-      }));
+      set((state) => {
+        const newState = {
+          tasks: state.tasks
+            .filter((t) => t.id !== id)
+            .map((t) =>
+              t.dependsOn && t.dependsOn.includes(id)
+                ? { ...t, dependsOn: t.dependsOn.filter((depId) => depId !== id) }
+                : t
+            ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
 
@@ -240,20 +363,26 @@ export const useStore = create<AppState>((set, get) => {
         };
         get().addNotification(newNotification);
       }
-      set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === taskId ? { ...t, assigneeId: memberId } : t
-        ),
-      }));
+      set((state) => {
+        const newState = {
+          tasks: state.tasks.map((t) =>
+            t.id === taskId ? { ...t, assigneeId: memberId } : t
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
 
     unassignTask: (taskId) => {
-      set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === taskId ? { ...t, assigneeId: undefined } : t
-        ),
-      }));
+      set((state) => {
+        const newState = {
+          tasks: state.tasks.map((t) =>
+            t.id === taskId ? { ...t, assigneeId: undefined } : t
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
 
@@ -271,7 +400,7 @@ export const useStore = create<AppState>((set, get) => {
           return state;
         }
 
-        return {
+        const newState = {
           tasks: state.tasks.map((t) =>
             t.id === taskId
               ? {
@@ -282,6 +411,7 @@ export const useStore = create<AppState>((set, get) => {
               : t
           ),
         };
+        return { ...newState, ...computeDerived(newState) };
       });
       persist();
     },
@@ -292,7 +422,7 @@ export const useStore = create<AppState>((set, get) => {
         if (status === 'in-progress' && task && isTaskBlocked(task, state.tasks)) {
           return state;
         }
-        return {
+        const newState = {
           tasks: state.tasks.map((t) =>
             t.id === taskId
               ? {
@@ -303,25 +433,32 @@ export const useStore = create<AppState>((set, get) => {
               : t
           ),
         };
+        return { ...newState, ...computeDerived(newState) };
       });
       persist();
     },
 
     toggleTaskDependency: (taskId, dependsOnId) => {
-      set((state) => ({
-        tasks: state.tasks.map((t) => {
-          if (t.id !== taskId) return t;
-          const deps = new Set(t.dependsOn || []);
-          if (deps.has(dependsOnId)) {
-            deps.delete(dependsOnId);
-          } else {
-            deps.add(dependsOnId);
-          }
-          return { ...t, dependsOn: Array.from(deps) };
-        }),
-      }));
+      set((state) => {
+        const newState = {
+          tasks: state.tasks.map((t) => {
+            if (t.id !== taskId) return t;
+            const deps = new Set(t.dependsOn || []);
+            if (deps.has(dependsOnId)) {
+              deps.delete(dependsOnId);
+            } else {
+              deps.add(dependsOnId);
+            }
+            return { ...t, dependsOn: Array.from(deps) };
+          }),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
+
+    setShowDependencyModal: (show, taskId) =>
+      set({ showDependencyModal: show, dependencyTaskId: taskId ?? null }),
 
     addNote: (taskId, content, authorId, parentId) => {
       const newNote: Note = {
@@ -332,32 +469,38 @@ export const useStore = create<AppState>((set, get) => {
         createdAt: new Date().toISOString(),
         parentId,
       };
-      set((state) => ({
-        tasks: state.tasks.map((t) =>
-          t.id === taskId
-            ? { ...t, notes: [...(t.notes || []), newNote] }
-            : t
-        ),
-      }));
+      set((state) => {
+        const newState = {
+          tasks: state.tasks.map((t) =>
+            t.id === taskId
+              ? { ...t, notes: [...(t.notes || []), newNote] }
+              : t
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
 
     deleteNote: (taskId, noteId) => {
-      set((state) => ({
-        tasks: state.tasks.map((t) => {
-          if (t.id !== taskId) return t;
-          const toRemove = new Set<string>([noteId]);
-          (t.notes || []).forEach((n) => {
-            if (n.parentId && toRemove.has(n.parentId)) {
-              toRemove.add(n.id);
-            }
-          });
-          return {
-            ...t,
-            notes: (t.notes || []).filter((n) => !toRemove.has(n.id)),
-          };
-        }),
-      }));
+      set((state) => {
+        const newState = {
+          tasks: state.tasks.map((t) => {
+            if (t.id !== taskId) return t;
+            const toRemove = new Set<string>([noteId]);
+            (t.notes || []).forEach((n) => {
+              if (n.parentId && toRemove.has(n.parentId)) {
+                toRemove.add(n.id);
+              }
+            });
+            return {
+              ...t,
+              notes: (t.notes || []).filter((n) => !toRemove.has(n.id)),
+            };
+          }),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
       persist();
     },
 
@@ -366,8 +509,6 @@ export const useStore = create<AppState>((set, get) => {
     setShowTaskModal: (show) => set({ showTaskModal: show }),
     setShowAssignModal: (show, taskId) =>
       set({ showAssignModal: show, selectedTaskId: taskId || null }),
-    setShowDependencyModal: (show, taskId) =>
-      set({ showDependencyModal: show, dependencyTaskId: taskId ?? null }),
     setShowNotificationPanel: (show) => set({ showNotificationPanel: show }),
     setActiveTab: (tab) => set({ activeTab: tab }),
 
@@ -404,11 +545,14 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     checkDeadlineNotifications: () => {
-      const { tasks, notifications } = get();
+      const { tasks, notifications, activeDeceasedId } = get();
+      if (!activeDeceasedId) return;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      tasks.forEach((task) => {
+      const activeTasks = tasks.filter((t) => t.deceasedId === activeDeceasedId);
+
+      activeTasks.forEach((task) => {
         if (task.status === 'completed' || !task.dueDate || !task.assigneeId) return;
 
         const daysRemaining = getDaysRemaining(task.dueDate);
@@ -469,67 +613,83 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     checkMemorialAnniversaries: () => {
-      const { deceased, generatedMemorialTasks, currentUser } = get();
-      if (!deceased) return;
+      const { deceaseds, tasks, currentUser, generatedMemorialTasks } = get();
 
-      const todayNodes = getTodayMemorialNodes(deceased.deathDate);
-      if (todayNodes.length === 0) return;
+      deceaseds.forEach((deceased) => {
+        const todayNodes = getTodayMemorialNodes(deceased.deathDate);
+        if (todayNodes.length === 0) return;
 
-      const funeralCategory = categories.find((c) => c.id === 'funeral');
-      if (!funeralCategory) return;
+        const funeralCategory = categories.find((c) => c.id === 'funeral');
+        if (!funeralCategory) return;
 
-      todayNodes.forEach((node) => {
-        if (generatedMemorialTasks[node.type]) return;
+        const deceasedGenTasks = generatedMemorialTasks[deceased.id] || getEmptyGeneratedMemorialTasks();
+        let needsUpdate = false;
+        const newGenTasks = { ...deceasedGenTasks };
 
-        const taskTitle = getMemorialTaskTitle(deceased.name, node.name);
-        const taskDescription = getMemorialTaskDescription(deceased.name, node.name, node.description);
+        todayNodes.forEach((node) => {
+          if (newGenTasks[node.type]) return;
 
-        const existingTask = get().tasks.find(
-          (t) => t.title === taskTitle && t.dueDate === node.date
-        );
-        if (existingTask) {
+          const taskTitle = getMemorialTaskTitle(deceased.name, node.name);
+          const taskDescription = getMemorialTaskDescription(deceased.name, node.name, node.description);
+
+          const existingTask = tasks.find(
+            (t) => t.deceasedId === deceased.id && t.title === taskTitle && t.dueDate === node.date
+          );
+          if (existingTask) {
+            newGenTasks[node.type] = true;
+            needsUpdate = true;
+            return;
+          }
+
+          const newTask: Task = {
+            id: generateId(),
+            title: taskTitle,
+            description: taskDescription,
+            categoryId: funeralCategory.id,
+            deceasedId: deceased.id,
+            status: 'pending',
+            dueDate: node.date,
+            priority: 2,
+            createdAt: new Date().toISOString(),
+            notes: [],
+            assigneeId: currentUser?.id,
+          };
+
+          set((state) => {
+            const newState = {
+              tasks: [...state.tasks, newTask],
+              generatedMemorialTasks: {
+                ...state.generatedMemorialTasks,
+                [deceased.id]: {
+                  ...(state.generatedMemorialTasks[deceased.id] || getEmptyGeneratedMemorialTasks()),
+                  [node.type]: true,
+                },
+              },
+            };
+            return { ...newState, ...computeDerived(newState) };
+          });
+
+          if (currentUser) {
+            const newNotification: Omit<Notification, 'id' | 'createdAt'> = {
+              type: 'deadline_approaching',
+              taskId: newTask.id,
+              taskTitle: newTask.title,
+              userId: currentUser.id,
+              read: false,
+              message: `今天是${deceased.name}老人的${node.name}纪念日，请安排好祭祀事宜。`,
+              daysRemaining: 0,
+            };
+            get().addNotification(newNotification);
+          }
+        });
+
+        if (needsUpdate) {
           set((state) => ({
             generatedMemorialTasks: {
               ...state.generatedMemorialTasks,
-              [node.type]: true,
+              [deceased.id]: newGenTasks,
             },
           }));
-          return;
-        }
-
-        const newTask: Task = {
-          id: generateId(),
-          title: taskTitle,
-          description: taskDescription,
-          categoryId: funeralCategory.id,
-          deceasedId: deceased.id,
-          status: 'pending',
-          dueDate: node.date,
-          priority: 2,
-          createdAt: new Date().toISOString(),
-          notes: [],
-          assigneeId: currentUser?.id,
-        };
-
-        set((state) => ({
-          tasks: [...state.tasks, newTask],
-          generatedMemorialTasks: {
-            ...state.generatedMemorialTasks,
-            [node.type]: true,
-          },
-        }));
-
-        if (currentUser) {
-          const newNotification: Omit<Notification, 'id' | 'createdAt'> = {
-            type: 'deadline_approaching',
-            taskId: newTask.id,
-            taskTitle: newTask.title,
-            userId: currentUser.id,
-            read: false,
-            message: `今天是${deceased.name}老人的${node.name}纪念日，请安排好祭祀事宜。`,
-            daysRemaining: 0,
-          };
-          get().addNotification(newNotification);
         }
       });
 
@@ -580,27 +740,36 @@ export const useStore = create<AppState>((set, get) => {
     resetData: () => {
       localStorage.removeItem('funeral_planner_data');
       set({
+        deceaseds: [],
+        activeDeceasedId: null,
         deceased: null,
         members: [],
         tasks: [],
+        activeTasks: [],
         notifications: [],
         currentUser: null,
         showSetup: true,
         generatedMemorialTasks: getInitialGeneratedMemorialTasks(),
+        activeGeneratedMemorialTasks: getEmptyGeneratedMemorialTasks(),
       });
     },
 
     loadFromLocalStorage: () => {
-      const persisted = loadFromStorage<PersistedData>();
+      const persistedRaw = loadFromStorage<any>();
+      const persisted = migrateOldData(persistedRaw);
       if (persisted) {
-        set({
-          deceased: persisted.deceased,
-          members: persisted.members,
-          tasks: persisted.tasks,
-          currentUser: persisted.currentUser,
-          notifications: persisted.notifications || [],
-          generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
-          showSetup: !persisted.deceased,
+        set((state) => {
+          const newState = {
+            deceaseds: persisted.deceaseds,
+            activeDeceasedId: persisted.activeDeceasedId,
+            members: persisted.members,
+            tasks: persisted.tasks,
+            currentUser: persisted.currentUser,
+            notifications: persisted.notifications || [],
+            generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
+            showSetup: persisted.deceaseds.length === 0,
+          };
+          return { ...newState, ...computeDerived(newState) };
         });
       }
     },

@@ -28,7 +28,7 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
   const {
     members,
     categories,
-    tasks,
+    activeTasks: tasks,
     toggleTaskStatus,
     setShowAssignModal,
     deleteTask,

@@ -9,7 +9,7 @@ export const AssignTaskModal = () => {
     showAssignModal,
     setShowAssignModal,
     selectedTaskId,
-    tasks,
+    activeTasks: tasks,
     members,
     assignTask,
     unassignTask,

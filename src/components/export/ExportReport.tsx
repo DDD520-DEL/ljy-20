@@ -24,7 +24,7 @@ interface ExportReportProps {
 }
 
 export const ExportReport = ({ reportRef }: ExportReportProps) => {
-  const { deceased, members, tasks, categories } = useStore();
+  const { deceased, members, activeTasks: tasks, categories } = useStore();
 
   if (!deceased) return null;
 

@@ -92,7 +92,8 @@ export interface Notification {
 }
 
 export interface AppState {
-  deceased: Deceased | null;
+  deceaseds: Deceased[];
+  activeDeceasedId: string | null;
   members: FamilyMember[];
   tasks: Task[];
   categories: TaskCategory[];

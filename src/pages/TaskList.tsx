@@ -24,7 +24,7 @@ const priorityFilters = [
 ];
 
 export const TaskList = () => {
-  const { categories, tasks } = useStore();
+  const { categories, activeTasks: tasks } = useStore();
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all');
   const [priorityFilter, setPriorityFilter] = useState<number>(0);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');

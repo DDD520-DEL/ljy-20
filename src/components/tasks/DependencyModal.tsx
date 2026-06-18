@@ -30,7 +30,7 @@ export const DependencyModal = () => {
     showDependencyModal,
     dependencyTaskId,
     setShowDependencyModal,
-    tasks,
+    activeTasks: tasks,
     categories,
     toggleTaskDependency,
   } = useStore();
