@@ -261,3 +261,36 @@ export interface FuneralItemTemplate {
   defaultQuantity: number;
   unit?: string;
 }
+
+export type ExpenseCategory = 'funeral_home' | 'cemetery' | 'banquet' | 'clothing' | 'incense' | 'flowers' | 'urn' | 'paper' | 'ceremony' | 'transport' | 'religious' | 'medical' | 'legal' | 'other';
+
+export const EXPENSE_CATEGORY_CONFIG: Record<ExpenseCategory, { name: string; icon: string; color: string; bgColor: string }> = {
+  funeral_home: { name: '殡仪馆费用', icon: 'Building2', color: 'text-slate-700', bgColor: 'bg-slate-100' },
+  cemetery: { name: '墓地费用', icon: 'TreePine', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
+  banquet: { name: '宴请费用', icon: 'UtensilsCrossed', color: 'text-orange-700', bgColor: 'bg-orange-100' },
+  clothing: { name: '寿衣寿被', icon: 'Shirt', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+  incense: { name: '香烛祭品', icon: 'Flame', color: 'text-orange-600', bgColor: 'bg-orange-50' },
+  flowers: { name: '花圈花篮', icon: 'Flower2', color: 'text-rose-700', bgColor: 'bg-rose-100' },
+  urn: { name: '骨灰盒坛', icon: 'Box', color: 'text-slate-800', bgColor: 'bg-slate-200' },
+  paper: { name: '纸钱冥品', icon: 'Scroll', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
+  ceremony: { name: '仪式服务', icon: 'Sparkles', color: 'text-purple-700', bgColor: 'bg-purple-100' },
+  transport: { name: '交通出行', icon: 'Car', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  religious: { name: '宗教法事', icon: 'Church', color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
+  medical: { name: '医疗相关', icon: 'HeartPulse', color: 'text-red-700', bgColor: 'bg-red-100' },
+  legal: { name: '法律手续', icon: 'FileText', color: 'text-cyan-700', bgColor: 'bg-cyan-100' },
+  other: { name: '其他费用', icon: 'Wallet', color: 'text-slate-600', bgColor: 'bg-slate-100' },
+};
+
+export interface Expense {
+  id: string;
+  category: ExpenseCategory;
+  title: string;
+  description?: string;
+  amount: number;
+  date: string;
+  payerId?: string;
+  deceasedId: string;
+  receipt?: string;
+  note?: string;
+  createdAt: string;
+}

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate, getDefaultTemplate, DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
 import { createDefaultItemsForDeceased } from '@/data/funeralItems';
@@ -26,11 +26,13 @@ interface AppState {
   savedTemplates: SavedTemplate[];
   generatedMemorialTasks: Record<string, Record<MemorialNodeType, boolean>>;
   funeralItems: FuneralItem[];
+  expenses: Expense[];
 
   deceased: Deceased | null;
   activeTasks: Task[];
   activeGeneratedMemorialTasks: Record<MemorialNodeType, boolean>;
   activeFuneralItems: FuneralItem[];
+  activeExpenses: Expense[];
 
   addDeceased: (deceased: Deceased, templateTasks?: TemplateTaskItem[]) => void;
   switchDeceased: (deceasedId: string) => void;
@@ -73,6 +75,9 @@ interface AppState {
   deleteFuneralItem: (id: string) => void;
   toggleFuneralItemPurchased: (id: string) => void;
   resetFuneralItems: (deceasedId: string) => void;
+  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
+  updateExpense: (id: string, updates: Partial<Expense>) => void;
+  deleteExpense: (id: string) => void;
 }
 
 interface PersistedData {
@@ -84,6 +89,7 @@ interface PersistedData {
   notifications: Notification[];
   generatedMemorialTasks: Record<string, Record<MemorialNodeType, boolean>>;
   funeralItems: FuneralItem[];
+  expenses: Expense[];
 }
 
 const getInitialSavedTemplates = (): SavedTemplate[] => {
@@ -134,6 +140,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
         ? { ...persisted.currentUser, permissionRole: persisted.currentUser.permissionRole || 'admin' as MemberRole }
         : null,
       funeralItems: persisted.funeralItems || [],
+      expenses: persisted.expenses || [],
     } as PersistedData;
   }
 
@@ -156,6 +163,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
         [oldDeceased.id]: persisted.generatedMemorialTasks || getEmptyGeneratedMemorialTasks(),
       },
       funeralItems: [],
+      expenses: [],
     };
   }
 
@@ -199,6 +207,10 @@ const getInitialState = () => {
       activeFuneralItems: activeDeceased
         ? (persisted.funeralItems || []).filter((i) => i.deceasedId === activeDeceased.id)
         : [],
+      expenses: persisted.expenses || [],
+      activeExpenses: activeDeceased
+        ? (persisted.expenses || []).filter((e) => e.deceasedId === activeDeceased.id)
+        : [],
       categories,
       showSetup: persisted.deceaseds.length === 0,
       showMemberModal: false,
@@ -225,6 +237,8 @@ const getInitialState = () => {
     activeGeneratedMemorialTasks: getEmptyGeneratedMemorialTasks(),
     funeralItems: [],
     activeFuneralItems: [],
+    expenses: [],
+    activeExpenses: [],
     categories,
     currentUser: null,
     showSetup: true,
@@ -242,8 +256,8 @@ const getInitialState = () => {
 
 export const useStore = create<AppState>((set, get) => {
   const persist = () => {
-    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems } = get();
-    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems });
+    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses } = get();
+    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses });
   };
 
   const persistTemplates = () => {
@@ -258,6 +272,7 @@ export const useStore = create<AppState>((set, get) => {
     const tasks = state.tasks ?? get().tasks;
     const generatedMemorialTasks = state.generatedMemorialTasks ?? get().generatedMemorialTasks;
     const funeralItems = state.funeralItems ?? get().funeralItems;
+    const expenses = state.expenses ?? get().expenses;
 
     const activeDeceased = deceaseds.find((d) => d.id === activeDeceasedId) || null;
     return {
@@ -268,6 +283,9 @@ export const useStore = create<AppState>((set, get) => {
         : getEmptyGeneratedMemorialTasks(),
       activeFuneralItems: activeDeceased
         ? funeralItems.filter((i) => i.deceasedId === activeDeceased.id)
+        : [],
+      activeExpenses: activeDeceased
+        ? expenses.filter((e) => e.deceasedId === activeDeceased.id)
         : [],
     };
   };
@@ -316,6 +334,7 @@ export const useStore = create<AppState>((set, get) => {
         const newDeceaseds = state.deceaseds.filter((d) => d.id !== deceasedId);
         const newTasks = state.tasks.filter((t) => t.deceasedId !== deceasedId);
         const newFuneralItems = state.funeralItems.filter((i) => i.deceasedId !== deceasedId);
+        const newExpenses = state.expenses.filter((e) => e.deceasedId !== deceasedId);
         const newGeneratedMemorialTasks = { ...state.generatedMemorialTasks };
         delete newGeneratedMemorialTasks[deceasedId];
 
@@ -330,6 +349,7 @@ export const useStore = create<AppState>((set, get) => {
           deceaseds: newDeceaseds,
           tasks: newTasks,
           funeralItems: newFuneralItems,
+          expenses: newExpenses,
           activeDeceasedId: newActiveId,
           generatedMemorialTasks: newGeneratedMemorialTasks,
           showSetup: newDeceaseds.length === 0,
@@ -831,6 +851,8 @@ export const useStore = create<AppState>((set, get) => {
         activeGeneratedMemorialTasks: getEmptyGeneratedMemorialTasks(),
         funeralItems: [],
         activeFuneralItems: [],
+        expenses: [],
+        activeExpenses: [],
       });
     },
 
@@ -846,6 +868,7 @@ export const useStore = create<AppState>((set, get) => {
             members: persisted.members,
             tasks: fixedTasks,
             funeralItems: persisted.funeralItems || [],
+            expenses: persisted.expenses || [],
             currentUser: persisted.currentUser,
             notifications: persisted.notifications || [],
             generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
@@ -916,6 +939,41 @@ export const useStore = create<AppState>((set, get) => {
       set((state) => {
         const filteredItems = state.funeralItems.filter((i) => i.deceasedId !== deceasedId);
         const newState = { funeralItems: [...filteredItems, ...defaultItems] };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    addExpense: (expense) => {
+      const newExpense: Expense = {
+        ...expense,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+      };
+      set((state) => {
+        const newState = { expenses: [...state.expenses, newExpense] };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    updateExpense: (id, updates) => {
+      set((state) => {
+        const newState = {
+          expenses: state.expenses.map((e) =>
+            e.id === id ? { ...e, ...updates } : e
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    deleteExpense: (id) => {
+      set((state) => {
+        const newState = {
+          expenses: state.expenses.filter((e) => e.id !== id),
+        };
         return { ...newState, ...computeDerived(newState) };
       });
       persist();

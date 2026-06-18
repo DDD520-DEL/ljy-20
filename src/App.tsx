@@ -9,6 +9,7 @@ import { AddMemberModal } from '@/components/members/AddMemberModal';
 import { Dashboard } from '@/pages/Dashboard';
 import { TaskList } from '@/pages/TaskList';
 import { ItemChecklist } from '@/pages/ItemChecklist';
+import { ExpenseTracker } from '@/pages/ExpenseTracker';
 import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
 import { ExportReport } from '@/components/export/ExportReport';
@@ -79,6 +80,8 @@ function App() {
         return <TaskList />;
       case 'items':
         return <ItemChecklist />;
+      case 'expenses':
+        return <ExpenseTracker />;
       case 'collaboration':
         return <Collaboration />;
       case 'reference':
