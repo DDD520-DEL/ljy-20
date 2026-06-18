@@ -8,6 +8,7 @@ import { DependencyModal } from '@/components/tasks/DependencyModal';
 import { AddMemberModal } from '@/components/members/AddMemberModal';
 import { Dashboard } from '@/pages/Dashboard';
 import { TaskList } from '@/pages/TaskList';
+import { ItemChecklist } from '@/pages/ItemChecklist';
 import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
 import { ExportReport } from '@/components/export/ExportReport';
@@ -76,6 +77,8 @@ function App() {
         return <Dashboard />;
       case 'tasks':
         return <TaskList />;
+      case 'items':
+        return <ItemChecklist />;
       case 'collaboration':
         return <Collaboration />;
       case 'reference':

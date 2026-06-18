@@ -224,3 +224,40 @@ export const MEMORIAL_NODE_CONFIG: Record<MemorialNodeType, { name: string; desc
     icon: 'HeartHandshake',
   },
 };
+
+export type FuneralItemCategory = 'clothing' | 'incense' | 'flowers' | 'urn' | 'paper' | 'ceremony' | 'food' | 'other';
+
+export const FUNERAL_ITEM_CATEGORY_CONFIG: Record<FuneralItemCategory, { name: string; icon: string; color: string }> = {
+  clothing: { name: '寿衣寿被', icon: 'Shirt', color: 'text-amber-600' },
+  incense: { name: '香烛祭品', icon: 'Flame', color: 'text-orange-600' },
+  flowers: { name: '花圈花篮', icon: 'Flower2', color: 'text-rose-600' },
+  urn: { name: '骨灰盒坛', icon: 'Box', color: 'text-slate-700' },
+  paper: { name: '纸钱冥品', icon: 'Scroll', color: 'text-yellow-700' },
+  ceremony: { name: '仪式用品', icon: 'Sparkles', color: 'text-purple-600' },
+  food: { name: '供品食物', icon: 'Apple', color: 'text-green-600' },
+  other: { name: '其他物品', icon: 'Package', color: 'text-blue-600' },
+};
+
+export interface FuneralItem {
+  id: string;
+  name: string;
+  category: FuneralItemCategory;
+  description?: string;
+  quantity: number;
+  unit?: string;
+  purchased: boolean;
+  purchasedAt?: string;
+  purchaserId?: string;
+  deceasedId: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface FuneralItemTemplate {
+  id: string;
+  name: string;
+  category: FuneralItemCategory;
+  description?: string;
+  defaultQuantity: number;
+  unit?: string;
+}

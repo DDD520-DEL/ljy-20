@@ -1,10 +1,11 @@
 import { useStore } from '@/store/useStore';
-import { LayoutDashboard, ListTodo, Users, BookOpen, Plus, Settings, Shield, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Users, BookOpen, Plus, Settings, Shield, ShieldCheck, Package } from 'lucide-react';
 import { MEMBER_ROLE_LABELS } from '@/types';
 
 const navItems = [
   { id: 'dashboard', label: '总览', icon: LayoutDashboard },
   { id: 'tasks', label: '事务清单', icon: ListTodo },
+  { id: 'items', label: '物品清单', icon: Package },
   { id: 'collaboration', label: '协作中心', icon: Users },
   { id: 'reference', label: '信息参考', icon: BookOpen },
 ];
