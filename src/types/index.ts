@@ -294,3 +294,13 @@ export interface Expense {
   note?: string;
   createdAt: string;
 }
+
+export interface Guest {
+  id: string;
+  name: string;
+  relationship: string;
+  phone: string;
+  deceasedId: string;
+  createdAt: string;
+  note?: string;
+}
