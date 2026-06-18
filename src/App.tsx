@@ -33,6 +33,7 @@ function App() {
     setShowSetup,
     setCurrentUser,
     checkDeadlineNotifications,
+    checkMemorialAnniversaries,
   } = useStore();
 
   const handleExportPdf = async () => {
@@ -60,12 +61,14 @@ function App() {
   useEffect(() => {
     if (deceased) {
       checkDeadlineNotifications();
+      checkMemorialAnniversaries();
       const interval = setInterval(() => {
         checkDeadlineNotifications();
+        checkMemorialAnniversaries();
       }, 60 * 60 * 1000);
       return () => clearInterval(interval);
     }
-  }, [deceased, checkDeadlineNotifications]);
+  }, [deceased, checkDeadlineNotifications, checkMemorialAnniversaries]);
 
   const handleSetupComplete = (
     deceasedInfo: { name: string; birthDate: string; deathDate: string; relationship: string },

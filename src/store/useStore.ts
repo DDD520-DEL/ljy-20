@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate, getDefaultTemplate, DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
 import { saveToStorage, loadFromStorage, saveTemplatesToStorage, loadTemplatesFromStorage } from '@/utils/storage';
-import { generateId, getDaysRemaining, isTaskBlocked } from '@/utils/progressUtils';
+import { generateId, getDaysRemaining, isTaskBlocked, getTodayMemorialNodes, getMemorialTaskTitle, getMemorialTaskDescription } from '@/utils/progressUtils';
 
 interface AppState {
   deceased: Deceased | null;
@@ -22,6 +22,7 @@ interface AppState {
   dependencyTaskId: string | null;
   activeTab: string;
   savedTemplates: SavedTemplate[];
+  generatedMemorialTasks: Record<MemorialNodeType, boolean>;
 
   setDeceased: (deceased: Deceased) => void;
   addMember: (member: Omit<FamilyMember, 'id'>) => void;
@@ -55,6 +56,7 @@ interface AppState {
   deleteTemplate: (templateId: string) => void;
   updateTemplate: (templateId: string, updates: Partial<SavedTemplate>) => void;
   loadSavedTemplates: () => void;
+  checkMemorialAnniversaries: () => void;
 }
 
 interface PersistedData {
@@ -63,6 +65,7 @@ interface PersistedData {
   tasks: Task[];
   currentUser: FamilyMember | null;
   notifications: Notification[];
+  generatedMemorialTasks: Record<MemorialNodeType, boolean>;
 }
 
 const getInitialSavedTemplates = (): SavedTemplate[] => {
@@ -78,6 +81,16 @@ const getInitialSavedTemplates = (): SavedTemplate[] => {
   return [defaultTemplate];
 };
 
+const getInitialGeneratedMemorialTasks = (): Record<MemorialNodeType, boolean> => ({
+  first7: false,
+  third7: false,
+  fifth7: false,
+  hundredth: false,
+  firstYear: false,
+  secondYear: false,
+  thirdYear: false,
+});
+
 const getInitialState = () => {
   const persisted = loadFromStorage<PersistedData>();
   const savedTemplates = getInitialSavedTemplates();
@@ -88,6 +101,7 @@ const getInitialState = () => {
       tasks: persisted.tasks,
       currentUser: persisted.currentUser,
       notifications: persisted.notifications || [],
+      generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
       categories,
       showSetup: !persisted.deceased,
       showMemberModal: false,
@@ -107,6 +121,7 @@ const getInitialState = () => {
     members: [],
     tasks: [],
     notifications: [],
+    generatedMemorialTasks: getInitialGeneratedMemorialTasks(),
     categories,
     currentUser: null,
     showSetup: true,
@@ -124,8 +139,8 @@ const getInitialState = () => {
 
 export const useStore = create<AppState>((set, get) => {
   const persist = () => {
-    const { deceased, members, tasks, currentUser, notifications } = get();
-    saveToStorage({ deceased, members, tasks, currentUser, notifications });
+    const { deceased, members, tasks, currentUser, notifications, generatedMemorialTasks } = get();
+    saveToStorage({ deceased, members, tasks, currentUser, notifications, generatedMemorialTasks });
   };
 
   const persistTemplates = () => {
@@ -453,6 +468,74 @@ export const useStore = create<AppState>((set, get) => {
       persist();
     },
 
+    checkMemorialAnniversaries: () => {
+      const { deceased, generatedMemorialTasks, currentUser } = get();
+      if (!deceased) return;
+
+      const todayNodes = getTodayMemorialNodes(deceased.deathDate);
+      if (todayNodes.length === 0) return;
+
+      const funeralCategory = categories.find((c) => c.id === 'funeral');
+      if (!funeralCategory) return;
+
+      todayNodes.forEach((node) => {
+        if (generatedMemorialTasks[node.type]) return;
+
+        const taskTitle = getMemorialTaskTitle(deceased.name, node.name);
+        const taskDescription = getMemorialTaskDescription(deceased.name, node.name, node.description);
+
+        const existingTask = get().tasks.find(
+          (t) => t.title === taskTitle && t.dueDate === node.date
+        );
+        if (existingTask) {
+          set((state) => ({
+            generatedMemorialTasks: {
+              ...state.generatedMemorialTasks,
+              [node.type]: true,
+            },
+          }));
+          return;
+        }
+
+        const newTask: Task = {
+          id: generateId(),
+          title: taskTitle,
+          description: taskDescription,
+          categoryId: funeralCategory.id,
+          deceasedId: deceased.id,
+          status: 'pending',
+          dueDate: node.date,
+          priority: 2,
+          createdAt: new Date().toISOString(),
+          notes: [],
+          assigneeId: currentUser?.id,
+        };
+
+        set((state) => ({
+          tasks: [...state.tasks, newTask],
+          generatedMemorialTasks: {
+            ...state.generatedMemorialTasks,
+            [node.type]: true,
+          },
+        }));
+
+        if (currentUser) {
+          const newNotification: Omit<Notification, 'id' | 'createdAt'> = {
+            type: 'deadline_approaching',
+            taskId: newTask.id,
+            taskTitle: newTask.title,
+            userId: currentUser.id,
+            read: false,
+            message: `今天是${deceased.name}老人的${node.name}纪念日，请安排好祭祀事宜。`,
+            daysRemaining: 0,
+          };
+          get().addNotification(newNotification);
+        }
+      });
+
+      persist();
+    },
+
     saveTemplate: (name, description, tasks) => {
       const now = new Date().toISOString();
       const newTemplate: SavedTemplate = {
@@ -503,6 +586,7 @@ export const useStore = create<AppState>((set, get) => {
         notifications: [],
         currentUser: null,
         showSetup: true,
+        generatedMemorialTasks: getInitialGeneratedMemorialTasks(),
       });
     },
 
@@ -515,6 +599,7 @@ export const useStore = create<AppState>((set, get) => {
           tasks: persisted.tasks,
           currentUser: persisted.currentUser,
           notifications: persisted.notifications || [],
+          generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
           showSetup: !persisted.deceased,
         });
       }

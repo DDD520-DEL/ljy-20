@@ -1,4 +1,5 @@
-import type { Task, TaskStatus } from '@/types';
+import type { Task, TaskStatus, MemorialNode, MemorialNodeType } from '@/types';
+import { MEMORIAL_NODE_CONFIG } from '@/types';
 
 export const getStatusText = (status: TaskStatus): string => {
   const statusMap: Record<TaskStatus, string> = {
@@ -166,3 +167,49 @@ export const memberColors = [
   '#e67e22',
   '#34495e',
 ];
+
+export const calculateMemorialDate = (deathDate: string, daysAfterDeath: number): string => {
+  const death = new Date(deathDate);
+  const memorialDate = new Date(death.getTime() + daysAfterDeath * 24 * 60 * 60 * 1000);
+  return memorialDate.toISOString().split('T')[0];
+};
+
+export const getMemorialNodes = (deathDate: string): MemorialNode[] => {
+  const nodeTypes: MemorialNodeType[] = ['first7', 'third7', 'fifth7', 'hundredth', 'firstYear', 'secondYear', 'thirdYear'];
+  
+  return nodeTypes.map((type) => {
+    const config = MEMORIAL_NODE_CONFIG[type];
+    const date = calculateMemorialDate(deathDate, config.daysAfterDeath);
+    const daysRemaining = getDaysRemaining(date);
+    
+    return {
+      type,
+      name: config.name,
+      description: config.description,
+      daysAfterDeath: config.daysAfterDeath,
+      date,
+      daysRemaining,
+      icon: config.icon,
+    };
+  });
+};
+
+export const getUpcomingMemorialNodes = (deathDate: string, limit?: number): MemorialNode[] => {
+  const nodes = getMemorialNodes(deathDate);
+  const upcoming = nodes.filter((node) => node.daysRemaining >= 0);
+  upcoming.sort((a, b) => a.daysRemaining - b.daysRemaining);
+  return limit ? upcoming.slice(0, limit) : upcoming;
+};
+
+export const getTodayMemorialNodes = (deathDate: string): MemorialNode[] => {
+  const nodes = getMemorialNodes(deathDate);
+  return nodes.filter((node) => node.daysRemaining === 0);
+};
+
+export const getMemorialTaskTitle = (deceasedName: string, nodeName: string): string => {
+  return `${deceasedName}老人${nodeName}祭祀纪念`;
+};
+
+export const getMemorialTaskDescription = (deceasedName: string, nodeName: string, description: string): string => {
+  return `今天是${deceasedName}老人的${nodeName}纪念日。${description}请安排好祭祀纪念事宜，缅怀逝者。`;
+};

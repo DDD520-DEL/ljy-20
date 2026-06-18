@@ -2,6 +2,7 @@ import { useStore } from '@/store/useStore';
 import { ProgressRing } from '@/components/common/ProgressRing';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { MemberAvatar } from '@/components/members/MemberAvatar';
+import { MemorialTracker } from '@/components/memorial/MemorialTracker';
 import {
   calculateProgress,
   getStatusCounts,
@@ -372,6 +373,8 @@ export const Dashboard = () => {
         </div>
 
         <div className="space-y-6">
+          <MemorialTracker limit={4} />
+
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-800 font-serif flex items-center gap-2">
