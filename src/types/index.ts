@@ -132,6 +132,36 @@ export interface MemorialNode {
   icon: string;
 }
 
+export interface Appointment {
+  id: string;
+  funeralHomeId: string;
+  funeralHomeName: string;
+  contactName: string;
+  contactPhone: string;
+  contactRelation: string;
+  deceasedName: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  serviceType: string;
+  remark?: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt: string;
+  confirmedAt?: string;
+}
+
+export type AppointmentServiceType = '遗体接运' | '遗体冷藏' | '告别仪式' | '火化' | '骨灰寄存' | '丧葬用品' | '礼仪服务' | '综合服务';
+
+export const APPOINTMENT_SERVICE_TYPES: AppointmentServiceType[] = [
+  '遗体接运',
+  '遗体冷藏',
+  '告别仪式',
+  '火化',
+  '骨灰寄存',
+  '丧葬用品',
+  '礼仪服务',
+  '综合服务',
+];
+
 export const MEMORIAL_NODE_CONFIG: Record<MemorialNodeType, { name: string; description: string; daysAfterDeath: number; icon: string }> = {
   first7: {
     name: '头七',

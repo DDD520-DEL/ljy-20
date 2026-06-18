@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { funeralHomes, cities } from '@/data/funeralHomes';
 import { funeralCustoms, regions } from '@/data/customs';
 import { guides } from '@/data/guides';
+import { AppointmentModal } from '@/components/appointment/AppointmentModal';
+import type { FuneralHome } from '@/types';
 import {
   Building2,
   MapPin,
@@ -15,6 +17,7 @@ import {
   MapPinned,
   FileText,
   Lightbulb,
+  CalendarPlus,
 } from 'lucide-react';
 
 type TabType = 'funeral-homes' | 'customs' | 'guides';
@@ -26,6 +29,8 @@ export const Reference = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCustom, setExpandedCustom] = useState<string | null>(null);
   const [expandedGuide, setExpandedGuide] = useState<string | null>(null);
+  const [selectedFuneralHome, setSelectedFuneralHome] = useState<FuneralHome | null>(null);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
 
   const filteredHomes = funeralHomes.filter((home) => {
     if (selectedCity !== 'all' && home.city !== selectedCity) return false;
@@ -156,7 +161,7 @@ export const Reference = () => {
 
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <p className="text-xs text-slate-500 mb-2">服务项目：</p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 mb-4">
                   {home.services.map((service) => (
                     <span
                       key={service}
@@ -166,6 +171,16 @@ export const Reference = () => {
                     </span>
                   ))}
                 </div>
+                <button
+                  onClick={() => {
+                    setSelectedFuneralHome(home);
+                    setShowAppointmentModal(true);
+                  }}
+                  className="w-full btn-primary text-sm flex items-center justify-center gap-2"
+                >
+                  <CalendarPlus className="w-4 h-4" />
+                  在线预约
+                </button>
               </div>
             </div>
           ))}
@@ -317,6 +332,12 @@ export const Reference = () => {
           ))}
         </div>
       )}
+
+      <AppointmentModal
+        isOpen={showAppointmentModal}
+        onClose={() => setShowAppointmentModal(false)}
+        funeralHome={selectedFuneralHome}
+      />
     </div>
   );
 };
