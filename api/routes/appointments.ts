@@ -153,6 +153,26 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+router.get('/phone/:phone', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { phone } = req.params;
+    const userAppointments = appointments
+      .filter((a) => a.contactPhone === phone)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.status(200).json({
+      success: true,
+      data: userAppointments,
+    });
+  } catch (error) {
+    console.error('查询预约列表失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '服务器内部错误',
+    });
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -172,26 +192,6 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error) {
     console.error('查询预约失败:', error);
-    res.status(500).json({
-      success: false,
-      error: '服务器内部错误',
-    });
-  }
-});
-
-router.get('/phone/:phone', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { phone } = req.params;
-    const userAppointments = appointments
-      .filter((a) => a.contactPhone === phone)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    res.status(200).json({
-      success: true,
-      data: userAppointments,
-    });
-  } catch (error) {
-    console.error('查询预约列表失败:', error);
     res.status(500).json({
       success: false,
       error: '服务器内部错误',
