@@ -43,6 +43,7 @@ export const Dashboard = () => {
     currentUser,
     notifications,
     setShowMemberModal,
+    setShowAssignModal,
     setActiveTab,
     markNotificationRead,
     setShowNotificationPanel,
@@ -455,14 +456,12 @@ export const Dashboard = () => {
                     className="flex items-center justify-between p-2 bg-white rounded-lg border border-gold-100"
                   >
                     <span className="text-sm text-slate-700 truncate flex-1">{task.title}</span>
-                    {isAdmin(currentUser) && (
-                      <button
-                        onClick={() => setActiveTab('tasks')}
-                        className="text-xs text-primary-600 hover:underline ml-2 flex-shrink-0"
-                      >
-                        认领
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setShowAssignModal(true, task.id)}
+                      className="text-xs text-primary-600 hover:underline ml-2 flex-shrink-0"
+                    >
+                      认领
+                    </button>
                   </div>
                 ))}
               </div>

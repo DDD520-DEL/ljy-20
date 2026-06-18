@@ -190,8 +190,7 @@ export const Collaboration = () => {
                       </div>
                       <button
                         onClick={() => setShowAssignModal(true, task.id)}
-                        disabled={!isCurrentUserAdmin}
-                        className={`btn-primary text-sm py-1.5 px-3 flex-shrink-0 ${!isCurrentUserAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className="btn-primary text-sm py-1.5 px-3 flex-shrink-0"
                       >
                         认领
                       </button>

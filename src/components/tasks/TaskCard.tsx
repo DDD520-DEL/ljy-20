@@ -62,6 +62,11 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
 
   const handleAssign = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setShowAssignModal(true, task.id);
+  };
+
+  const handleTransfer = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!isCurrentUserAdmin) return;
     setShowAssignModal(true, task.id);
   };
@@ -217,7 +222,7 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
                     <span className="text-xs text-slate-500">{assignee.name}</span>
                     {isCurrentUserAdmin && currentUser?.id !== assignee.id && (
                       <button
-                        onClick={handleAssign}
+                        onClick={handleTransfer}
                         className="text-xs text-primary-600 hover:underline"
                       >
                         转让
@@ -225,15 +230,13 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
                     )}
                   </div>
                 ) : (
-                  isCurrentUserAdmin && (
-                    <button
-                      onClick={handleAssign}
-                      className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 transition-colors"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      <span>认领任务</span>
-                    </button>
-                  )
+                  <button
+                    onClick={handleAssign}
+                    className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 transition-colors"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>认领任务</span>
+                  </button>
                 )}
 
                 <button
