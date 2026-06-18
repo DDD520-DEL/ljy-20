@@ -1,5 +1,6 @@
 import { User } from 'lucide-react';
 import type { FamilyMember } from '@/types';
+import { MEMBER_ROLE_LABELS } from '@/types';
 
 interface MemberAvatarProps {
   member: FamilyMember;
@@ -39,7 +40,13 @@ export const MemberAvatar = ({ member, size = 'md', showName = false }: MemberAv
       {showName && (
         <div className="flex flex-col">
           <span className="text-sm font-medium text-slate-700">{member.name}</span>
-          <span className="text-xs text-slate-500">{member.role}</span>
+          <span className="text-xs text-slate-500">
+            {member.role}
+            <span className="text-slate-300 mx-1">·</span>
+            <span className={member.permissionRole === 'admin' ? 'text-gold-600' : 'text-slate-400'}>
+              {MEMBER_ROLE_LABELS[member.permissionRole]}
+            </span>
+          </span>
         </div>
       )}
     </div>

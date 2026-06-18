@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate, getDefaultTemplate, DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
 import { saveToStorage, loadFromStorage, saveTemplatesToStorage, loadTemplatesFromStorage } from '@/utils/storage';
@@ -34,6 +34,7 @@ interface AppState {
   deleteDeceased: (deceasedId: string) => void;
   addMember: (member: Omit<FamilyMember, 'id'>) => void;
   removeMember: (id: string) => void;
+  updateMemberRole: (id: string, permissionRole: MemberRole) => void;
   setCurrentUser: (member: FamilyMember) => void;
   initializeFromTemplate: (deceased: Deceased, templateTasks?: TemplateTaskItem[]) => void;
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
@@ -101,6 +102,12 @@ const getEmptyGeneratedMemorialTasks = (): Record<MemorialNodeType, boolean> => 
   thirdYear: false,
 });
 
+const ensureMemberRoles = (members: FamilyMember[]): FamilyMember[] => {
+  return members.map((m) =>
+    m.permissionRole ? m : { ...m, permissionRole: 'admin' as MemberRole }
+  );
+};
+
 const migrateOldData = (persisted: any): PersistedData | null => {
   if (!persisted) return null;
 
@@ -113,6 +120,10 @@ const migrateOldData = (persisted: any): PersistedData | null => {
     return {
       ...persisted,
       tasks: migratedTasks,
+      members: ensureMemberRoles(persisted.members || []),
+      currentUser: persisted.currentUser
+        ? { ...persisted.currentUser, permissionRole: persisted.currentUser.permissionRole || 'admin' as MemberRole }
+        : null,
     } as PersistedData;
   }
 
@@ -125,9 +136,11 @@ const migrateOldData = (persisted: any): PersistedData | null => {
     return {
       deceaseds: [oldDeceased],
       activeDeceasedId: oldDeceased.id,
-      members: persisted.members || [],
+      members: ensureMemberRoles(persisted.members || []),
       tasks: migratedTasks,
-      currentUser: persisted.currentUser || null,
+      currentUser: persisted.currentUser
+        ? { ...persisted.currentUser, permissionRole: persisted.currentUser.permissionRole || 'admin' as MemberRole }
+        : null,
       notifications: persisted.notifications || [],
       generatedMemorialTasks: {
         [oldDeceased.id]: persisted.generatedMemorialTasks || getEmptyGeneratedMemorialTasks(),
@@ -320,6 +333,23 @@ export const useStore = create<AppState>((set, get) => {
           t.assigneeId === id ? { ...t, assigneeId: undefined } : t
         ),
       }));
+      persist();
+    },
+
+    updateMemberRole: (id, permissionRole) => {
+      set((state) => {
+        const updatedMembers = state.members.map((m) =>
+          m.id === id ? { ...m, permissionRole } : m
+        );
+        const updatedCurrentUser =
+          state.currentUser?.id === id
+            ? { ...state.currentUser, permissionRole }
+            : state.currentUser;
+        return {
+          members: updatedMembers,
+          currentUser: updatedCurrentUser,
+        };
+      });
       persist();
     },
 

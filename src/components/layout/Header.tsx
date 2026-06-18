@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import { UserPlus, Plus, Bell, RefreshCw, Download, Loader2, ChevronDown, UserRound, Trash2 } from 'lucide-react';
 import { formatDate } from '@/utils/progressUtils';
 import { NotificationCenter } from '@/components/common/NotificationCenter';
+import { isAdmin } from '@/types';
 
 interface HeaderProps {
   onExportPdf?: () => void;
@@ -174,15 +175,17 @@ export const Header = ({ onExportPdf, isExporting = false }: HeaderProps) => {
           </button>
         )}
 
-        <button
-          onClick={() => setShowMemberModal(true)}
-          className="flex items-center gap-2 px-3 md:px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span className="hidden sm:inline">添加成员</span>
-        </button>
+        {isAdmin(currentUser) && (
+          <button
+            onClick={() => setShowMemberModal(true)}
+            className="flex items-center gap-2 px-3 md:px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">添加成员</span>
+          </button>
+        )}
 
-        {deceased && (
+        {deceased && isAdmin(currentUser) && (
           <button
             onClick={() => setShowTaskModal(true)}
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"

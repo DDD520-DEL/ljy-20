@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, Clock, AlertTriangle, UserPlus, MoreVertical, Trash2, MessageCircle, Link2, Lock } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import type { Task } from '@/types';
+import { isAdmin, canManageTask } from '@/types';
 import { MemberAvatar } from '@/components/members/MemberAvatar';
 import { TaskNotes } from './TaskNotes';
 import {
@@ -37,6 +38,9 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
     currentUser,
   } = useStore();
 
+  const isCurrentUserAdmin = isAdmin(currentUser);
+  const canManage = canManageTask(currentUser, task.assigneeId);
+
   const assignee = members.find((m) => m.id === task.assigneeId);
   const category = categories.find((c) => c.id === task.categoryId);
 
@@ -50,6 +54,7 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!canManage) return;
     setRipple(true);
     setTimeout(() => setRipple(false), 300);
     setTimeout(() => toggleTaskStatus(task.id), 150);
@@ -57,11 +62,13 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
 
   const handleAssign = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isCurrentUserAdmin) return;
     setShowAssignModal(true, task.id);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isCurrentUserAdmin) return;
     if (confirm('确定要删除这个任务吗？')) {
       deleteTask(task.id);
     }
@@ -70,7 +77,14 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
 
   const handleDependency = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isCurrentUserAdmin) return;
     setShowDependencyModal(true, task.id);
+    setShowMenu(false);
+  };
+
+  const handleSetStatus = (status: 'pending' | 'in-progress' | 'completed') => {
+    if (!canManage) return;
+    setTaskStatus(task.id, status);
     setShowMenu(false);
   };
 
@@ -88,7 +102,10 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
         <div className="flex-shrink-0 pt-1">
           <button
             onClick={handleCheckboxClick}
+            disabled={!canManage}
             className={`relative w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ripple-effect ${
+              !canManage ? 'cursor-not-allowed opacity-60' : ''
+            } ${
               task.status === 'completed'
                 ? 'bg-green-500 border-green-500 text-white'
                 : task.status === 'in-progress'
@@ -151,7 +168,12 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                   <button
                     onClick={handleDependency}
-                    className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 hover:underline transition-colors"
+                    disabled={!isCurrentUserAdmin}
+                    className={`flex items-center gap-1 text-xs transition-colors ${
+                      isCurrentUserAdmin
+                        ? 'text-purple-600 hover:text-purple-700 hover:underline'
+                        : 'text-purple-500 cursor-default'
+                    }`}
                   >
                     <Link2 className="w-3.5 h-3.5" />
                     {blockingTasks.length > 0 ? (
@@ -193,7 +215,7 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
                   <div className="flex items-center gap-2">
                     <MemberAvatar member={assignee} size="sm" />
                     <span className="text-xs text-slate-500">{assignee.name}</span>
-                    {currentUser?.id !== assignee.id && (
+                    {isCurrentUserAdmin && currentUser?.id !== assignee.id && (
                       <button
                         onClick={handleAssign}
                         className="text-xs text-primary-600 hover:underline"
@@ -203,22 +225,29 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
                     )}
                   </div>
                 ) : (
-                  <button
-                    onClick={handleAssign}
-                    className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 transition-colors"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>认领任务</span>
-                  </button>
+                  isCurrentUserAdmin && (
+                    <button
+                      onClick={handleAssign}
+                      className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 transition-colors"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>认领任务</span>
+                    </button>
+                  )
                 )}
 
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowNotes(!showNotes);
+                    if (canManage) {
+                      setShowNotes(!showNotes);
+                    }
                   }}
+                  disabled={!canManage}
                   className={`flex items-center gap-1 text-xs transition-colors ${
-                    showNotes
+                    !canManage
+                      ? 'text-slate-300 cursor-not-allowed'
+                      : showNotes
                       ? 'text-primary-600'
                       : notesCount > 0
                       ? 'text-primary-600'
@@ -231,77 +260,74 @@ export const TaskCard = ({ task, showCategory = false }: TaskCardProps) => {
               </div>
             </div>
 
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowMenu(!showMenu);
-                }}
-                className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
-              >
-                <MoreVertical className="w-4 h-4 text-slate-400" />
-              </button>
-
-              {showMenu && (
-                <div
-                  className="absolute right-0 top-8 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10"
-                  onClick={(e) => e.stopPropagation()}
+            {canManage && (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(!showMenu);
+                  }}
+                  className="p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
-                  <button
-                    onClick={() => {
-                      setTaskStatus(task.id, 'pending');
-                      setShowMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  <MoreVertical className="w-4 h-4 text-slate-400" />
+                </button>
+
+                {showMenu && (
+                  <div
+                    className="absolute right-0 top-8 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    标记为待办
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTaskStatus(task.id, 'in-progress');
-                      setShowMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    标记为进行中
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTaskStatus(task.id, 'completed');
-                      setShowMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    标记为已完成
-                  </button>
-                  <div className="border-t border-slate-200 my-1"></div>
-                  <button
-                    onClick={handleDependency}
-                    className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Link2 className="w-4 h-4" />
-                      依赖设置{dependsOnCount > 0 ? ` (${dependsOnCount})` : ''}
-                    </span>
-                  </button>
-                  <div className="border-t border-slate-200 my-1"></div>
-                  <button
-                    onClick={handleDelete}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Trash2 className="w-4 h-4" />
-                      删除任务
-                    </span>
-                  </button>
-                </div>
-              )}
-            </div>
+                    <button
+                      onClick={() => handleSetStatus('pending')}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      标记为待办
+                    </button>
+                    <button
+                      onClick={() => handleSetStatus('in-progress')}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      标记为进行中
+                    </button>
+                    <button
+                      onClick={() => handleSetStatus('completed')}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      标记为已完成
+                    </button>
+                    {isCurrentUserAdmin && (
+                      <>
+                        <div className="border-t border-slate-200 my-1"></div>
+                        <button
+                          onClick={handleDependency}
+                          className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Link2 className="w-4 h-4" />
+                            依赖设置{dependsOnCount > 0 ? ` (${dependsOnCount})` : ''}
+                          </span>
+                        </button>
+                        <div className="border-t border-slate-200 my-1"></div>
+                        <button
+                          onClick={handleDelete}
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Trash2 className="w-4 h-4" />
+                            删除任务
+                          </span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {showNotes && <TaskNotes task={task} />}
+      {showNotes && canManage && <TaskNotes task={task} />}
     </div>
   );
 };

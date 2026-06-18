@@ -32,6 +32,7 @@ import {
   Lock,
 } from 'lucide-react';
 import type { Notification } from '@/types';
+import { isAdmin } from '@/types';
 
 export const Dashboard = () => {
   const {
@@ -384,6 +385,7 @@ export const Dashboard = () => {
               <button
                 onClick={() => setShowMemberModal(true)}
                 className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+                style={{ visibility: isAdmin(currentUser) ? 'visible' : 'hidden' }}
               >
                 <UserPlus className="w-4 h-4 text-slate-400" />
               </button>
@@ -428,12 +430,14 @@ export const Dashboard = () => {
               <div className="text-center py-6">
                 <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                 <p className="text-sm text-slate-500">暂无家庭成员</p>
-                <button
-                  onClick={() => setShowMemberModal(true)}
-                  className="mt-2 text-sm text-primary-600 hover:text-primary-700"
-                >
-                  添加成员
-                </button>
+                {isAdmin(currentUser) && (
+                  <button
+                    onClick={() => setShowMemberModal(true)}
+                    className="mt-2 text-sm text-primary-600 hover:text-primary-700"
+                  >
+                    添加成员
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -451,12 +455,14 @@ export const Dashboard = () => {
                     className="flex items-center justify-between p-2 bg-white rounded-lg border border-gold-100"
                   >
                     <span className="text-sm text-slate-700 truncate flex-1">{task.title}</span>
-                    <button
-                      onClick={() => setActiveTab('tasks')}
-                      className="text-xs text-primary-600 hover:underline ml-2 flex-shrink-0"
-                    >
-                      认领
-                    </button>
+                    {isAdmin(currentUser) && (
+                      <button
+                        onClick={() => setActiveTab('tasks')}
+                        className="text-xs text-primary-600 hover:underline ml-2 flex-shrink-0"
+                      >
+                        认领
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

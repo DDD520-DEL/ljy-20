@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { generateId } from '@/utils/progressUtils';
-import { Heart, Calendar, User, ArrowRight, ArrowLeft, FileText, Trash2, Save, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, Calendar, User, ArrowRight, ArrowLeft, FileText, Trash2, Save, CheckCircle2, ChevronDown, ChevronUp, Shield, ShieldCheck } from 'lucide-react';
 import { TaskTemplateEditor } from '@/components/tasks/TaskTemplateEditor';
-import type { TemplateTaskItem, SavedTemplate } from '@/types';
+import type { TemplateTaskItem, SavedTemplate, MemberRole } from '@/types';
+import { MEMBER_ROLE_LABELS } from '@/types';
 import { DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
 
 interface SetupModalProps {
@@ -37,6 +38,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
   const [relationship, setRelationship] = useState('');
   const [memberName, setMemberName] = useState('');
   const [memberRole, setMemberRole] = useState('');
+  const [memberPermissionRole, setMemberPermissionRole] = useState<MemberRole>('admin');
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(DEFAULT_TEMPLATE_ID);
   const [customTasks, setCustomTasks] = useState<TemplateTaskItem[]>([]);
@@ -55,6 +57,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
       setRelationship('');
       setMemberName(currentUser?.name || '');
       setMemberRole(currentUser?.role || '');
+      setMemberPermissionRole(currentUser?.permissionRole || 'admin');
       setSelectedTemplateId(DEFAULT_TEMPLATE_ID);
       setCustomTasks([]);
       setShowTemplateList(true);
@@ -132,6 +135,7 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
         name: memberName.trim(),
         role: memberRole.trim() || '家庭成员',
         color: '#3f51b5',
+        permissionRole: memberPermissionRole,
       };
 
       addMember(newMember);
@@ -344,6 +348,44 @@ export const SetupModal = ({ onComplete }: SetupModalProps) => {
                     placeholder="如：长子、女儿、配偶等"
                     className="input-field"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    角色权限 <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMemberPermissionRole('admin')}
+                      className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                        memberPermissionRole === 'admin'
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <ShieldCheck className={`w-5 h-5 ${memberPermissionRole === 'admin' ? 'text-primary-600' : 'text-slate-400'}`} />
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-slate-800">{MEMBER_ROLE_LABELS.admin}</p>
+                        <p className="text-xs text-slate-500">可增删任务和成员</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMemberPermissionRole('assistant')}
+                      className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                        memberPermissionRole === 'assistant'
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Shield className={`w-5 h-5 ${memberPermissionRole === 'assistant' ? 'text-primary-600' : 'text-slate-400'}`} />
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-slate-800">{MEMBER_ROLE_LABELS.assistant}</p>
+                        <p className="text-xs text-slate-500">仅更新自己的任务</p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-6">

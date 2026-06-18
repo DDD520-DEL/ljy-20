@@ -1,5 +1,6 @@
 import { useStore } from '@/store/useStore';
-import { LayoutDashboard, ListTodo, Users, BookOpen, Plus, Settings } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Users, BookOpen, Plus, Settings, Shield, ShieldCheck } from 'lucide-react';
+import { MEMBER_ROLE_LABELS } from '@/types';
 
 const navItems = [
   { id: 'dashboard', label: '总览', icon: LayoutDashboard },
@@ -54,7 +55,20 @@ export const Sidebar = () => {
               <p className="text-sm font-medium text-slate-700 truncate">
                 {currentUser.name}
               </p>
-              <p className="text-xs text-slate-500 truncate">{currentUser.role}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs text-slate-500 truncate">{currentUser.role}</p>
+                <span className="text-slate-300">·</span>
+                <span className={`inline-flex items-center gap-0.5 text-xs ${
+                  currentUser.permissionRole === 'admin' ? 'text-gold-600' : 'text-slate-400'
+                }`}>
+                  {currentUser.permissionRole === 'admin' ? (
+                    <ShieldCheck className="w-3 h-3" />
+                  ) : (
+                    <Shield className="w-3 h-3" />
+                  )}
+                  {MEMBER_ROLE_LABELS[currentUser.permissionRole]}
+                </span>
+              </div>
             </div>
             <button className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors">
               <Settings className="w-4 h-4 text-slate-400" />

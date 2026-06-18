@@ -7,13 +7,31 @@ export interface Deceased {
   avatar?: string;
 }
 
+export type MemberRole = 'admin' | 'assistant';
+
+export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {
+  admin: '管理员',
+  assistant: '协助者',
+};
+
 export interface FamilyMember {
   id: string;
   name: string;
   role: string;
   avatar?: string;
   color: string;
+  permissionRole: MemberRole;
 }
+
+export const isAdmin = (member: FamilyMember | null): boolean => {
+  return member?.permissionRole === 'admin';
+};
+
+export const canManageTask = (member: FamilyMember | null, taskAssigneeId?: string): boolean => {
+  if (!member) return false;
+  if (member.permissionRole === 'admin') return true;
+  return taskAssigneeId === member.id;
+};
 
 export interface TaskCategory {
   id: string;

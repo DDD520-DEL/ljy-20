@@ -4,10 +4,12 @@ import { MemberAvatar } from '@/components/members/MemberAvatar';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { getUnassignedTasks, getMemberTaskCount, getMemberProgress } from '@/utils/progressUtils';
 import { Users, UserPlus, PieChart, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { isAdmin } from '@/types';
 
 export const Collaboration = () => {
-  const { members, activeTasks: tasks, setShowMemberModal, setShowAssignModal } = useStore();
+  const { members, activeTasks: tasks, setShowMemberModal, setShowAssignModal, currentUser } = useStore();
 
+  const isCurrentUserAdmin = isAdmin(currentUser);
   const unassignedTasks = getUnassignedTasks(tasks);
 
   const memberStats = members.map((member) => {
@@ -67,15 +69,24 @@ export const Collaboration = () => {
           </div>
         </div>
 
-        <div className="card">
-          <button
-            onClick={() => setShowMemberModal(true)}
-            className="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-xl p-4 hover:border-primary-400 hover:bg-primary-50 transition-colors"
-          >
-            <UserPlus className="w-8 h-8 text-slate-400" />
-            <span className="text-slate-600 font-medium">添加家庭成员</span>
-          </button>
-        </div>
+        {isCurrentUserAdmin ? (
+          <div className="card">
+            <button
+              onClick={() => setShowMemberModal(true)}
+              className="w-full h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-xl p-4 hover:border-primary-400 hover:bg-primary-50 transition-colors"
+            >
+              <UserPlus className="w-8 h-8 text-slate-400" />
+              <span className="text-slate-600 font-medium">添加家庭成员</span>
+            </button>
+          </div>
+        ) : (
+          <div className="card flex items-center justify-center">
+            <div className="text-center text-slate-400">
+              <Users className="w-8 h-8 mx-auto mb-2" />
+              <p className="text-sm">仅管理员可添加成员</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card mb-6">
@@ -135,12 +146,14 @@ export const Collaboration = () => {
             <div className="text-center py-8 text-slate-500">
               <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
               <p>暂无家庭成员</p>
-              <button
-                onClick={() => setShowMemberModal(true)}
-                className="mt-2 text-primary-600 hover:text-primary-700"
-              >
-                添加成员
-              </button>
+              {isCurrentUserAdmin && (
+                <button
+                  onClick={() => setShowMemberModal(true)}
+                  className="mt-2 text-primary-600 hover:text-primary-700"
+                >
+                  添加成员
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -177,7 +190,8 @@ export const Collaboration = () => {
                       </div>
                       <button
                         onClick={() => setShowAssignModal(true, task.id)}
-                        className="btn-primary text-sm py-1.5 px-3 flex-shrink-0"
+                        disabled={!isCurrentUserAdmin}
+                        className={`btn-primary text-sm py-1.5 px-3 flex-shrink-0 ${!isCurrentUserAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         认领
                       </button>

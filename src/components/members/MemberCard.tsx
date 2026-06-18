@@ -1,6 +1,7 @@
-import { Trash2, Crown } from 'lucide-react';
+import { Trash2, Crown, Shield, ShieldCheck } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import type { FamilyMember } from '@/types';
+import type { FamilyMember, MemberRole } from '@/types';
+import { MEMBER_ROLE_LABELS, isAdmin } from '@/types';
 import { MemberAvatar } from './MemberAvatar';
 import { getMemberProgress, getMemberTaskCount } from '@/utils/progressUtils';
 
@@ -9,15 +10,20 @@ interface MemberCardProps {
 }
 
 export const MemberCard = ({ member }: MemberCardProps) => {
-  const { activeTasks: tasks, removeMember, currentUser, setCurrentUser } = useStore();
+  const { activeTasks: tasks, removeMember, updateMemberRole, currentUser, setCurrentUser } = useStore();
 
   const taskCount = getMemberTaskCount(tasks, member.id);
   const progress = getMemberProgress(tasks, member.id);
   const isCurrentUser = currentUser?.id === member.id;
+  const isCurrentUserAdmin = isAdmin(currentUser);
 
   const completedCount = tasks.filter(
     (t) => t.assigneeId === member.id && t.status === 'completed'
   ).length;
+
+  const handleRoleChange = (newRole: MemberRole) => {
+    updateMemberRole(member.id, newRole);
+  };
 
   return (
     <div className={`card ${isCurrentUser ? 'ring-2 ring-primary-200' : ''}`}>
@@ -37,31 +43,57 @@ export const MemberCard = ({ member }: MemberCardProps) => {
               {isCurrentUser && (
                 <span className="badge bg-primary-100 text-primary-700">当前用户</span>
               )}
+              <span className={`badge flex items-center gap-1 ${
+                member.permissionRole === 'admin'
+                  ? 'bg-gold-100 text-gold-700'
+                  : 'bg-slate-100 text-slate-600'
+              }`}>
+                {member.permissionRole === 'admin' ? (
+                  <ShieldCheck className="w-3 h-3" />
+                ) : (
+                  <Shield className="w-3 h-3" />
+                )}
+                {MEMBER_ROLE_LABELS[member.permissionRole]}
+              </span>
             </div>
             <p className="text-sm text-slate-500">{member.role}</p>
           </div>
         </div>
 
-        {!isCurrentUser && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentUser(member)}
-              className="text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 px-2 py-1 rounded transition-colors"
+        <div className="flex items-center gap-2">
+          {!isCurrentUser && isCurrentUserAdmin && (
+            <select
+              value={member.permissionRole}
+              onChange={(e) => handleRoleChange(e.target.value as MemberRole)}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 hover:border-primary-300 focus:outline-none focus:ring-1 focus:ring-primary-300"
             >
-              切换身份
-            </button>
-            <button
-              onClick={() => {
-                if (confirm(`确定要移除成员 ${member.name} 吗？`)) {
-                  removeMember(member.id);
-                }
-              }}
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+              <option value="admin">{MEMBER_ROLE_LABELS.admin}</option>
+              <option value="assistant">{MEMBER_ROLE_LABELS.assistant}</option>
+            </select>
+          )}
+          {!isCurrentUser && (
+            <>
+              <button
+                onClick={() => setCurrentUser(member)}
+                className="text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 px-2 py-1 rounded transition-colors"
+              >
+                切换身份
+              </button>
+              {isCurrentUserAdmin && (
+                <button
+                  onClick={() => {
+                    if (confirm(`确定要移除成员 ${member.name} 吗？`)) {
+                      removeMember(member.id);
+                    }
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="mt-4 pt-4 border-t border-slate-100">
