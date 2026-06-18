@@ -105,16 +105,28 @@ const migrateOldData = (persisted: any): PersistedData | null => {
   if (!persisted) return null;
 
   if ('deceaseds' in persisted && Array.isArray(persisted.deceaseds)) {
-    return persisted as PersistedData;
+    const migratedTasks = (persisted.tasks || []).map((t: Task) => {
+      if (t.deceasedId) return t;
+      const onlyDeceased = persisted.deceaseds.length === 1 ? persisted.deceaseds[0] : null;
+      return onlyDeceased ? { ...t, deceasedId: onlyDeceased.id } : t;
+    });
+    return {
+      ...persisted,
+      tasks: migratedTasks,
+    } as PersistedData;
   }
 
   if ('deceased' in persisted && persisted.deceased) {
     const oldDeceased: Deceased = persisted.deceased;
+    const migratedTasks = (persisted.tasks || []).map((t: Task) => ({
+      ...t,
+      deceasedId: oldDeceased.id,
+    }));
     return {
       deceaseds: [oldDeceased],
       activeDeceasedId: oldDeceased.id,
       members: persisted.members || [],
-      tasks: persisted.tasks || [],
+      tasks: migratedTasks,
       currentUser: persisted.currentUser || null,
       notifications: persisted.notifications || [],
       generatedMemorialTasks: {
@@ -126,21 +138,32 @@ const migrateOldData = (persisted: any): PersistedData | null => {
   return null;
 };
 
+const fixOrphanTasks = (deceaseds: Deceased[], tasks: Task[]): Task[] => {
+  const hasOrphan = tasks.some((t) => !t.deceasedId);
+  if (!hasOrphan) return tasks;
+  const onlyDeceased = deceaseds.length === 1 ? deceaseds[0] : null;
+  if (!onlyDeceased) return tasks;
+  return tasks.map((t) =>
+    t.deceasedId ? t : { ...t, deceasedId: onlyDeceased.id }
+  );
+};
+
 const getInitialState = () => {
   const persistedRaw = loadFromStorage<any>();
   const persisted = migrateOldData(persistedRaw);
   const savedTemplates = getInitialSavedTemplates();
 
   if (persisted) {
+    const fixedTasks = fixOrphanTasks(persisted.deceaseds, persisted.tasks);
     const activeDeceased = persisted.deceaseds.find((d) => d.id === persisted.activeDeceasedId) || null;
     return {
       deceaseds: persisted.deceaseds,
       activeDeceasedId: persisted.activeDeceasedId,
       deceased: activeDeceased,
       members: persisted.members,
-      tasks: persisted.tasks,
+      tasks: fixedTasks,
       activeTasks: activeDeceased
-        ? persisted.tasks.filter((t) => t.deceasedId === activeDeceased.id)
+        ? fixedTasks.filter((t) => t.deceasedId === activeDeceased.id)
         : [],
       currentUser: persisted.currentUser,
       notifications: persisted.notifications || [],
@@ -758,12 +781,13 @@ export const useStore = create<AppState>((set, get) => {
       const persistedRaw = loadFromStorage<any>();
       const persisted = migrateOldData(persistedRaw);
       if (persisted) {
+        const fixedTasks = fixOrphanTasks(persisted.deceaseds, persisted.tasks);
         set((state) => {
           const newState = {
             deceaseds: persisted.deceaseds,
             activeDeceasedId: persisted.activeDeceasedId,
             members: persisted.members,
-            tasks: persisted.tasks,
+            tasks: fixedTasks,
             currentUser: persisted.currentUser,
             notifications: persisted.notifications || [],
             generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
