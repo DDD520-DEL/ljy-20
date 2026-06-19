@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory, Guest, MemorialMessage, CondolenceGift, CeremonyStep, CeremonyStepStatus, FuneralDocument } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory, Guest, MemorialMessage, CondolenceGift, CeremonyStep, CeremonyStepStatus, FuneralDocument, Eulogy, EulogyStatus } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate, getDefaultTemplate, DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
 import { createDefaultItemsForDeceased } from '@/data/funeralItems';
@@ -34,6 +34,7 @@ interface AppState {
 
   ceremonySteps: CeremonyStep[];
   documents: FuneralDocument[];
+  eulogies: Eulogy[];
 
   deceased: Deceased | null;
   activeTasks: Task[];
@@ -45,6 +46,7 @@ interface AppState {
   activeCondolenceGifts: CondolenceGift[];
   activeCeremonySteps: CeremonyStep[];
   activeDocuments: FuneralDocument[];
+  activeEulogies: Eulogy[];
 
   addDeceased: (deceased: Deceased, templateTasks?: TemplateTaskItem[]) => void;
   switchDeceased: (deceasedId: string) => void;
@@ -109,6 +111,11 @@ interface AppState {
   addDocument: (doc: Omit<FuneralDocument, 'id' | 'uploadDate'>) => void;
   updateDocument: (id: string, updates: Partial<FuneralDocument>) => void;
   deleteDocument: (id: string) => void;
+
+  addEulogy: (eulogy: Omit<Eulogy, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateEulogy: (id: string, updates: Partial<Eulogy>) => void;
+  deleteEulogy: (id: string) => void;
+  setEulogyStatus: (id: string, status: EulogyStatus) => void;
 }
 
 interface PersistedData {
@@ -126,6 +133,7 @@ interface PersistedData {
   condolenceGifts: CondolenceGift[];
   ceremonySteps: CeremonyStep[];
   documents: FuneralDocument[];
+  eulogies: Eulogy[];
 }
 
 const getInitialSavedTemplates = (): SavedTemplate[] => {
@@ -192,6 +200,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
       condolenceGifts: persisted.condolenceGifts || [],
       ceremonySteps: persisted.ceremonySteps || [],
       documents: persisted.documents || [],
+      eulogies: persisted.eulogies || [],
     } as PersistedData;
   }
 
@@ -220,6 +229,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
       condolenceGifts: [],
       ceremonySteps: [],
       documents: [],
+      eulogies: [],
     };
   }
 
@@ -287,6 +297,10 @@ const getInitialState = () => {
       activeDocuments: activeDeceased
         ? (persisted.documents || []).filter((d) => d.deceasedId === activeDeceased.id)
         : [],
+      eulogies: persisted.eulogies || [],
+      activeEulogies: activeDeceased
+        ? (persisted.eulogies || []).filter((e) => e.deceasedId === activeDeceased.id)
+        : [],
       categories,
       showSetup: persisted.deceaseds.length === 0,
       showMemberModal: false,
@@ -325,6 +339,8 @@ const getInitialState = () => {
     activeCeremonySteps: [],
     documents: [],
     activeDocuments: [],
+    eulogies: [],
+    activeEulogies: [],
     categories,
     currentUser: null,
     showSetup: true,
@@ -342,8 +358,8 @@ const getInitialState = () => {
 
 export const useStore = create<AppState>((set, get) => {
   const persist = () => {
-    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents } = get();
-    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents });
+    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents, eulogies } = get();
+    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents, eulogies });
   };
 
   const persistTemplates = () => {
@@ -364,6 +380,7 @@ export const useStore = create<AppState>((set, get) => {
     const condolenceGifts = state.condolenceGifts ?? get().condolenceGifts;
     const ceremonySteps = state.ceremonySteps ?? get().ceremonySteps;
     const documents = state.documents ?? get().documents;
+    const eulogies = state.eulogies ?? get().eulogies;
 
     const activeDeceased = deceaseds.find((d) => d.id === activeDeceasedId) || null;
     return {
@@ -392,6 +409,9 @@ export const useStore = create<AppState>((set, get) => {
         : [],
       activeDocuments: activeDeceased
         ? documents.filter((d) => d.deceasedId === activeDeceased.id)
+        : [],
+      activeEulogies: activeDeceased
+        ? eulogies.filter((e) => e.deceasedId === activeDeceased.id)
         : [],
     };
   };
@@ -448,6 +468,7 @@ export const useStore = create<AppState>((set, get) => {
         const newCondolenceGifts = state.condolenceGifts.filter((c) => c.deceasedId !== deceasedId);
         const newCeremonySteps = state.ceremonySteps.filter((s) => s.deceasedId !== deceasedId);
         const newDocuments = state.documents.filter((d) => d.deceasedId !== deceasedId);
+        const newEulogies = state.eulogies.filter((e) => e.deceasedId !== deceasedId);
         const newGeneratedMemorialTasks = { ...state.generatedMemorialTasks };
         delete newGeneratedMemorialTasks[deceasedId];
 
@@ -468,6 +489,7 @@ export const useStore = create<AppState>((set, get) => {
           condolenceGifts: newCondolenceGifts,
           ceremonySteps: newCeremonySteps,
           documents: newDocuments,
+          eulogies: newEulogies,
           activeDeceasedId: newActiveId,
           generatedMemorialTasks: newGeneratedMemorialTasks,
           showSetup: newDeceaseds.length === 0,
@@ -981,6 +1003,8 @@ export const useStore = create<AppState>((set, get) => {
         activeCeremonySteps: [],
         documents: [],
         activeDocuments: [],
+        eulogies: [],
+        activeEulogies: [],
       });
     },
 
@@ -1002,6 +1026,7 @@ export const useStore = create<AppState>((set, get) => {
             condolenceGifts: persisted.condolenceGifts || [],
             ceremonySteps: persisted.ceremonySteps || [],
             documents: persisted.documents || [],
+            eulogies: persisted.eulogies || [],
             currentUser: persisted.currentUser,
             notifications: persisted.notifications || [],
             generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
@@ -1313,6 +1338,62 @@ export const useStore = create<AppState>((set, get) => {
       set((state) => {
         const newState = {
           documents: state.documents.filter((d) => d.id !== id),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    addEulogy: (eulogy) => {
+      const now = new Date().toISOString();
+      const newEulogy: Eulogy = {
+        ...eulogy,
+        id: generateId(),
+        createdAt: now,
+        updatedAt: now,
+      };
+      set((state) => {
+        const newState = { eulogies: [...state.eulogies, newEulogy] };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    updateEulogy: (id, updates) => {
+      set((state) => {
+        const newState = {
+          eulogies: state.eulogies.map((e) =>
+            e.id === id ? { ...e, ...updates, updatedAt: new Date().toISOString() } : e
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    deleteEulogy: (id) => {
+      set((state) => {
+        const newState = {
+          eulogies: state.eulogies.filter((e) => e.id !== id),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    setEulogyStatus: (id, status) => {
+      set((state) => {
+        const newState = {
+          eulogies: state.eulogies.map((e) =>
+            e.id === id
+              ? {
+                  ...e,
+                  status,
+                  updatedAt: new Date().toISOString(),
+                  finalizedAt: status === 'finalized' ? new Date().toISOString() : undefined,
+                }
+              : e
+          ),
         };
         return { ...newState, ...computeDerived(newState) };
       });

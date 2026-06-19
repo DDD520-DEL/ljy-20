@@ -17,6 +17,7 @@ import { DocumentArchive } from '@/pages/DocumentArchive';
 import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
 import { ObituaryGenerator } from '@/pages/ObituaryGenerator';
+import { EulogyEditor } from '@/pages/EulogyEditor';
 import { CeremonyTimeline } from '@/pages/CeremonyTimeline';
 import { ExportReport } from '@/components/export/ExportReport';
 import { useStore } from '@/store/useStore';
@@ -96,6 +97,8 @@ function App() {
         return <CeremonyTimeline />;
       case 'obituary':
         return <ObituaryGenerator />;
+      case 'eulogy':
+        return <EulogyEditor />;
       case 'memorial':
         return <MemorialWall />;
       case 'documents':

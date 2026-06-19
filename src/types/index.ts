@@ -397,6 +397,26 @@ export interface FuneralDocument {
   note?: string;
 }
 
+export type EulogyStatus = 'draft' | 'finalized';
+
+export interface Eulogy {
+  id: string;
+  deceasedId: string;
+  title: string;
+  content: string;
+  authorId?: string;
+  authorName?: string;
+  status: EulogyStatus;
+  createdAt: string;
+  updatedAt: string;
+  finalizedAt?: string;
+}
+
+export const EULOGY_STATUS_CONFIG: Record<EulogyStatus, { name: string; color: string; bgColor: string }> = {
+  draft: { name: '草稿', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+  finalized: { name: '已定稿', color: 'text-green-700', bgColor: 'bg-green-100' },
+};
+
 export const DEFAULT_CEREMONY_STEPS: Omit<CeremonyStep, 'id' | 'deceasedId' | 'createdAt'>[] = [
   {
     type: 'arrival',
