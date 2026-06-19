@@ -14,6 +14,7 @@ import { GuestRegister } from '@/pages/GuestRegister';
 import { MemorialWall } from '@/pages/MemorialWall';
 import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
+import { ObituaryGenerator } from '@/pages/ObituaryGenerator';
 import { ExportReport } from '@/components/export/ExportReport';
 import { useStore } from '@/store/useStore';
 import { exportToPdf } from '@/utils/exportPdf';
@@ -86,6 +87,8 @@ function App() {
         return <ExpenseTracker />;
       case 'guests':
         return <GuestRegister />;
+      case 'obituary':
+        return <ObituaryGenerator />;
       case 'memorial':
         return <MemorialWall />;
       case 'collaboration':
