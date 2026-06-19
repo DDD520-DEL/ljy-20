@@ -304,3 +304,13 @@ export interface Guest {
   createdAt: string;
   note?: string;
 }
+
+export interface MemorialMessage {
+  id: string;
+  authorName: string;
+  authorRelationship: string;
+  content: string;
+  deceasedId: string;
+  createdAt: string;
+  authorId?: string;
+}
