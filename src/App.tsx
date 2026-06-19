@@ -16,6 +16,7 @@ import { MemorialWall } from '@/pages/MemorialWall';
 import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
 import { ObituaryGenerator } from '@/pages/ObituaryGenerator';
+import { CeremonyTimeline } from '@/pages/CeremonyTimeline';
 import { ExportReport } from '@/components/export/ExportReport';
 import { useStore } from '@/store/useStore';
 import { exportToPdf } from '@/utils/exportPdf';
@@ -90,6 +91,8 @@ function App() {
         return <GuestRegister />;
       case 'gifts':
         return <GiftRegistry />;
+      case 'ceremony':
+        return <CeremonyTimeline />;
       case 'obituary':
         return <ObituaryGenerator />;
       case 'memorial':

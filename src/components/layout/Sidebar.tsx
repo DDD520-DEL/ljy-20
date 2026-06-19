@@ -1,5 +1,5 @@
 import { useStore } from '@/store/useStore';
-import { LayoutDashboard, ListTodo, Users, BookOpen, Plus, Settings, Shield, ShieldCheck, Package, Wallet, UserPlus, MessageSquareHeart, FileText, Gift } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Users, BookOpen, Plus, Settings, Shield, ShieldCheck, Package, Wallet, UserPlus, MessageSquareHeart, FileText, Gift, CalendarClock } from 'lucide-react';
 import { MEMBER_ROLE_LABELS } from '@/types';
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { id: 'expenses', label: '费用记账', icon: Wallet },
   { id: 'guests', label: '宾客登记', icon: UserPlus },
   { id: 'gifts', label: '随礼登记', icon: Gift },
+  { id: 'ceremony', label: '告别仪式', icon: CalendarClock },
   { id: 'obituary', label: '讣告生成', icon: FileText },
   { id: 'memorial', label: '悼念留言墙', icon: MessageSquareHeart },
   { id: 'collaboration', label: '协作中心', icon: Users },

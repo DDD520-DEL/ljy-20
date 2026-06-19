@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory, Guest, MemorialMessage, CondolenceGift } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory, Guest, MemorialMessage, CondolenceGift, CeremonyStep, CeremonyStepStatus } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate, getDefaultTemplate, DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
 import { createDefaultItemsForDeceased } from '@/data/funeralItems';
+import { DEFAULT_CEREMONY_STEPS } from '@/types';
 import { saveToStorage, loadFromStorage, saveTemplatesToStorage, loadTemplatesFromStorage } from '@/utils/storage';
 import { generateId, getDaysRemaining, isTaskBlocked, getTodayMemorialNodes, getMemorialTaskTitle, getMemorialTaskDescription } from '@/utils/progressUtils';
 
@@ -31,6 +32,8 @@ interface AppState {
   memorialMessages: MemorialMessage[];
   condolenceGifts: CondolenceGift[];
 
+  ceremonySteps: CeremonyStep[];
+
   deceased: Deceased | null;
   activeTasks: Task[];
   activeGeneratedMemorialTasks: Record<MemorialNodeType, boolean>;
@@ -39,6 +42,7 @@ interface AppState {
   activeGuests: Guest[];
   activeMemorialMessages: MemorialMessage[];
   activeCondolenceGifts: CondolenceGift[];
+  activeCeremonySteps: CeremonyStep[];
 
   addDeceased: (deceased: Deceased, templateTasks?: TemplateTaskItem[]) => void;
   switchDeceased: (deceasedId: string) => void;
@@ -92,6 +96,13 @@ interface AppState {
   addCondolenceGift: (gift: Omit<CondolenceGift, 'id' | 'createdAt'>) => void;
   updateCondolenceGift: (id: string, updates: Partial<CondolenceGift>) => void;
   deleteCondolenceGift: (id: string) => void;
+
+  addCeremonyStep: (step: Omit<CeremonyStep, 'id' | 'createdAt'>) => void;
+  updateCeremonyStep: (id: string, updates: Partial<CeremonyStep>) => void;
+  deleteCeremonyStep: (id: string) => void;
+  setCeremonyStepStatus: (id: string, status: CeremonyStepStatus) => void;
+  reorderCeremonySteps: (steps: CeremonyStep[]) => void;
+  resetCeremonySteps: (deceasedId: string) => void;
 }
 
 interface PersistedData {
@@ -107,6 +118,7 @@ interface PersistedData {
   guests: Guest[];
   memorialMessages: MemorialMessage[];
   condolenceGifts: CondolenceGift[];
+  ceremonySteps: CeremonyStep[];
 }
 
 const getInitialSavedTemplates = (): SavedTemplate[] => {
@@ -133,6 +145,16 @@ const getEmptyGeneratedMemorialTasks = (): Record<MemorialNodeType, boolean> => 
   secondYear: false,
   thirdYear: false,
 });
+
+const createDefaultCeremonyStepsForDeceased = (deceasedId: string): CeremonyStep[] => {
+  return DEFAULT_CEREMONY_STEPS.map((step, index) => ({
+    ...step,
+    id: generateId(),
+    deceasedId,
+    order: index + 1,
+    createdAt: new Date().toISOString(),
+  }));
+};
 
 const ensureMemberRoles = (members: FamilyMember[]): FamilyMember[] => {
   return members.map((m) =>
@@ -161,6 +183,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
       guests: persisted.guests || [],
       memorialMessages: persisted.memorialMessages || [],
       condolenceGifts: persisted.condolenceGifts || [],
+      ceremonySteps: persisted.ceremonySteps || [],
     } as PersistedData;
   }
 
@@ -187,6 +210,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
       guests: [],
       memorialMessages: [],
       condolenceGifts: [],
+      ceremonySteps: [],
     };
   }
 
@@ -246,6 +270,10 @@ const getInitialState = () => {
       activeCondolenceGifts: activeDeceased
         ? (persisted.condolenceGifts || []).filter((c) => c.deceasedId === activeDeceased.id)
         : [],
+      ceremonySteps: persisted.ceremonySteps || [],
+      activeCeremonySteps: activeDeceased
+        ? (persisted.ceremonySteps || []).filter((s) => s.deceasedId === activeDeceased.id).sort((a, b) => a.order - b.order)
+        : [],
       categories,
       showSetup: persisted.deceaseds.length === 0,
       showMemberModal: false,
@@ -280,6 +308,8 @@ const getInitialState = () => {
     activeMemorialMessages: [],
     condolenceGifts: [],
     activeCondolenceGifts: [],
+    ceremonySteps: [],
+    activeCeremonySteps: [],
     categories,
     currentUser: null,
     showSetup: true,
@@ -297,8 +327,8 @@ const getInitialState = () => {
 
 export const useStore = create<AppState>((set, get) => {
   const persist = () => {
-    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts } = get();
-    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts });
+    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps } = get();
+    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps });
   };
 
   const persistTemplates = () => {
@@ -317,6 +347,7 @@ export const useStore = create<AppState>((set, get) => {
     const guests = state.guests ?? get().guests;
     const memorialMessages = state.memorialMessages ?? get().memorialMessages;
     const condolenceGifts = state.condolenceGifts ?? get().condolenceGifts;
+    const ceremonySteps = state.ceremonySteps ?? get().ceremonySteps;
 
     const activeDeceased = deceaseds.find((d) => d.id === activeDeceasedId) || null;
     return {
@@ -340,6 +371,9 @@ export const useStore = create<AppState>((set, get) => {
       activeCondolenceGifts: activeDeceased
         ? condolenceGifts.filter((c) => c.deceasedId === activeDeceased.id)
         : [],
+      activeCeremonySteps: activeDeceased
+        ? ceremonySteps.filter((s) => s.deceasedId === activeDeceased.id).sort((a, b) => a.order - b.order)
+        : [],
     };
   };
 
@@ -356,6 +390,7 @@ export const useStore = create<AppState>((set, get) => {
         createdAt: new Date().toISOString(),
       }));
       const newFuneralItems = createDefaultItemsForDeceased(deceased.id);
+      const newCeremonySteps = createDefaultCeremonyStepsForDeceased(deceased.id);
 
       set((state) => {
         const newState = {
@@ -363,6 +398,7 @@ export const useStore = create<AppState>((set, get) => {
           activeDeceasedId: deceased.id,
           tasks: [...state.tasks, ...newTasks],
           funeralItems: [...state.funeralItems, ...newFuneralItems],
+          ceremonySteps: [...state.ceremonySteps, ...newCeremonySteps],
           generatedMemorialTasks: {
             ...state.generatedMemorialTasks,
             [deceased.id]: getEmptyGeneratedMemorialTasks(),
@@ -391,6 +427,7 @@ export const useStore = create<AppState>((set, get) => {
         const newGuests = state.guests.filter((g) => g.deceasedId !== deceasedId);
         const newMemorialMessages = state.memorialMessages.filter((m) => m.deceasedId !== deceasedId);
         const newCondolenceGifts = state.condolenceGifts.filter((c) => c.deceasedId !== deceasedId);
+        const newCeremonySteps = state.ceremonySteps.filter((s) => s.deceasedId !== deceasedId);
         const newGeneratedMemorialTasks = { ...state.generatedMemorialTasks };
         delete newGeneratedMemorialTasks[deceasedId];
 
@@ -409,6 +446,7 @@ export const useStore = create<AppState>((set, get) => {
           guests: newGuests,
           memorialMessages: newMemorialMessages,
           condolenceGifts: newCondolenceGifts,
+          ceremonySteps: newCeremonySteps,
           activeDeceasedId: newActiveId,
           generatedMemorialTasks: newGeneratedMemorialTasks,
           showSetup: newDeceaseds.length === 0,
@@ -918,6 +956,8 @@ export const useStore = create<AppState>((set, get) => {
         activeMemorialMessages: [],
         condolenceGifts: [],
         activeCondolenceGifts: [],
+        ceremonySteps: [],
+        activeCeremonySteps: [],
       });
     },
 
@@ -937,6 +977,7 @@ export const useStore = create<AppState>((set, get) => {
             guests: persisted.guests || [],
             memorialMessages: persisted.memorialMessages || [],
             condolenceGifts: persisted.condolenceGifts || [],
+            ceremonySteps: persisted.ceremonySteps || [],
             currentUser: persisted.currentUser,
             notifications: persisted.notifications || [],
             generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
@@ -1135,6 +1176,85 @@ export const useStore = create<AppState>((set, get) => {
         const newState = {
           condolenceGifts: state.condolenceGifts.filter((g) => g.id !== id),
         };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    addCeremonyStep: (step) => {
+      const newStep: CeremonyStep = {
+        ...step,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+      };
+      set((state) => {
+        const newState = { ceremonySteps: [...state.ceremonySteps, newStep] };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    updateCeremonyStep: (id, updates) => {
+      set((state) => {
+        const newState = {
+          ceremonySteps: state.ceremonySteps.map((s) =>
+            s.id === id ? { ...s, ...updates } : s
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    deleteCeremonyStep: (id) => {
+      set((state) => {
+        const remainingSteps = state.ceremonySteps.filter((s) => s.id !== id);
+        const deceasedStep = remainingSteps.find((s) => s.deceasedId === state.ceremonySteps.find((step) => step.id === id)?.deceasedId);
+        const deceasedId = state.ceremonySteps.find((step) => step.id === id)?.deceasedId;
+        const reorderedSteps = remainingSteps
+          .filter((s) => s.deceasedId === deceasedId)
+          .sort((a, b) => a.order - b.order)
+          .map((s, index) => ({ ...s, order: index + 1 }));
+        const otherSteps = remainingSteps.filter((s) => s.deceasedId !== deceasedId);
+        const newState = {
+          ceremonySteps: [...otherSteps, ...reorderedSteps],
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    setCeremonyStepStatus: (id, status) => {
+      set((state) => {
+        const newState = {
+          ceremonySteps: state.ceremonySteps.map((s) =>
+            s.id === id ? { ...s, status } : s
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    reorderCeremonySteps: (steps) => {
+      set((state) => {
+        const reorderedSteps = steps.map((s, index) => ({ ...s, order: index + 1 }));
+        const otherSteps = state.ceremonySteps.filter(
+          (s) => !steps.find((step) => step.id === s.id)
+        );
+        const newState = {
+          ceremonySteps: [...otherSteps, ...reorderedSteps],
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    resetCeremonySteps: (deceasedId) => {
+      const defaultSteps = createDefaultCeremonyStepsForDeceased(deceasedId);
+      set((state) => {
+        const filteredSteps = state.ceremonySteps.filter((s) => s.deceasedId !== deceasedId);
+        const newState = { ceremonySteps: [...filteredSteps, ...defaultSteps] };
         return { ...newState, ...computeDerived(newState) };
       });
       persist();

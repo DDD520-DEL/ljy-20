@@ -335,3 +335,106 @@ export interface CondolenceGift {
   deceasedId: string;
   createdAt: string;
 }
+
+export type CeremonyStepStatus = 'pending' | 'in-progress' | 'completed';
+
+export const CEREMONY_STEP_STATUS_CONFIG: Record<CeremonyStepStatus, { name: string; color: string; bgColor: string }> = {
+  pending: { name: '待开始', color: 'text-slate-500', bgColor: 'bg-slate-100' },
+  'in-progress': { name: '进行中', color: 'text-amber-600', bgColor: 'bg-amber-100' },
+  completed: { name: '已完成', color: 'text-green-600', bgColor: 'bg-green-100' },
+};
+
+export type CeremonyStepType = 'arrival' | 'condolence' | 'eulogy' | 'family_speech' | 'bowing' | 'viewing' | 'cremation' | 'other';
+
+export const CEREMONY_STEP_TYPE_CONFIG: Record<CeremonyStepType, { name: string; icon: string; color: string; bgColor: string }> = {
+  arrival: { name: '签到入场', icon: 'LogIn', color: 'text-blue-600', bgColor: 'bg-blue-100' },
+  condolence: { name: '遗体告别', icon: 'Heart', color: 'text-rose-600', bgColor: 'bg-rose-100' },
+  eulogy: { name: '致悼词', icon: 'BookOpen', color: 'text-purple-600', bgColor: 'bg-purple-100' },
+  family_speech: { name: '家属致辞', icon: 'Users', color: 'text-amber-600', bgColor: 'bg-amber-100' },
+  bowing: { name: '鞠躬行礼', icon: 'PersonStanding', color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
+  viewing: { name: '瞻仰遗容', icon: 'Eye', color: 'text-slate-600', bgColor: 'bg-slate-100' },
+  cremation: { name: '火化仪式', icon: 'Flame', color: 'text-orange-600', bgColor: 'bg-orange-100' },
+  other: { name: '其他环节', icon: 'MoreHorizontal', color: 'text-slate-600', bgColor: 'bg-slate-100' },
+};
+
+export interface CeremonyStep {
+  id: string;
+  deceasedId: string;
+  type: CeremonyStepType;
+  title: string;
+  description?: string;
+  startTime: string;
+  duration: number;
+  order: number;
+  status: CeremonyStepStatus;
+  location?: string;
+  host?: string;
+  note?: string;
+  createdAt: string;
+}
+
+export const DEFAULT_CEREMONY_STEPS: Omit<CeremonyStep, 'id' | 'deceasedId' | 'createdAt'>[] = [
+  {
+    type: 'arrival',
+    title: '签到入场',
+    description: '来宾签到、佩戴白花、领取礼单',
+    startTime: '08:00',
+    duration: 60,
+    order: 1,
+    status: 'pending',
+  },
+  {
+    type: 'condolence',
+    title: '遗体告别仪式开始',
+    description: '全体肃立、默哀',
+    startTime: '09:00',
+    duration: 10,
+    order: 2,
+    status: 'pending',
+  },
+  {
+    type: 'eulogy',
+    title: '致悼词',
+    description: '单位领导/主持人致悼词',
+    startTime: '09:10',
+    duration: 20,
+    order: 3,
+    status: 'pending',
+  },
+  {
+    type: 'family_speech',
+    title: '家属致谢词',
+    description: '家属代表致答谢词',
+    startTime: '09:30',
+    duration: 15,
+    order: 4,
+    status: 'pending',
+  },
+  {
+    type: 'bowing',
+    title: '向逝者三鞠躬',
+    description: '全体来宾向逝者行三鞠躬礼',
+    startTime: '09:45',
+    duration: 5,
+    order: 5,
+    status: 'pending',
+  },
+  {
+    type: 'viewing',
+    title: '瞻仰遗容',
+    description: '来宾依次瞻仰遗容并慰问家属',
+    startTime: '09:50',
+    duration: 40,
+    order: 6,
+    status: 'pending',
+  },
+  {
+    type: 'cremation',
+    title: '送别火化',
+    description: '送别遗体至火化炉',
+    startTime: '10:30',
+    duration: 30,
+    order: 7,
+    status: 'pending',
+  },
+];
