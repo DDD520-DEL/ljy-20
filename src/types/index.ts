@@ -314,3 +314,24 @@ export interface MemorialMessage {
   createdAt: string;
   authorId?: string;
 }
+
+export type CondolenceGiftType = 'cash' | 'gift';
+
+export const CONDOLENCE_GIFT_TYPE_CONFIG: Record<CondolenceGiftType, { name: string; icon: string; color: string; bgColor: string }> = {
+  cash: { name: '礼金', icon: 'Banknote', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
+  gift: { name: '礼品', icon: 'Gift', color: 'text-rose-700', bgColor: 'bg-rose-100' },
+};
+
+export interface CondolenceGift {
+  id: string;
+  type: CondolenceGiftType;
+  guestName: string;
+  relationship: string;
+  amount?: number;
+  giftName?: string;
+  quantity?: number;
+  date: string;
+  note?: string;
+  deceasedId: string;
+  createdAt: string;
+}

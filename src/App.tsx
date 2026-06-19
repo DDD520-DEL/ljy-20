@@ -11,6 +11,7 @@ import { TaskList } from '@/pages/TaskList';
 import { ItemChecklist } from '@/pages/ItemChecklist';
 import { ExpenseTracker } from '@/pages/ExpenseTracker';
 import { GuestRegister } from '@/pages/GuestRegister';
+import { GiftRegistry } from '@/pages/GiftRegistry';
 import { MemorialWall } from '@/pages/MemorialWall';
 import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
@@ -87,6 +88,8 @@ function App() {
         return <ExpenseTracker />;
       case 'guests':
         return <GuestRegister />;
+      case 'gifts':
+        return <GiftRegistry />;
       case 'obituary':
         return <ObituaryGenerator />;
       case 'memorial':
