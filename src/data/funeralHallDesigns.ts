@@ -2,12 +2,19 @@ import type { FuneralHallDesign } from '@/types';
 
 export const funeralHallStyles = ['traditional', 'modern', 'buddhist', 'christian', 'minimalist', 'nature'] as const;
 
+const buildImageUrl = (prompt: string) => {
+  const encodedPrompt = encodeURIComponent(prompt);
+  return `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodedPrompt}&image_size=landscape_16_9`;
+};
+
 export const funeralHallDesigns: FuneralHallDesign[] = [
   {
     id: 'hall-001',
     name: '传统中式灵堂',
     style: 'traditional',
-    imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=traditional%20Chinese%20funeral%20hall%20with%20red%20and%20gold%20decorations%20elegant%20memorial%20altar%20with%20incense%20candles%20and%20white%20flowers%20solemn%20atmosphere%20high%20quality%20interior%20design&image_size=landscape_16_9',
+    imageUrl: buildImageUrl(
+      'traditional Chinese funeral memorial hall interior, elegant red and gold color scheme, ornate wooden altar with incense burners, white chrysanthemum and lily flower arrangements, solemn and respectful atmosphere, high quality architectural photography, soft warm lighting'
+    ),
     description: '庄严肃穆的传统中式灵堂，以红金配色为主，彰显传统文化底蕴，适合高龄长者的寿终正寝。',
     features: ['传统红金配色', '龙凤呈祥图案', '寿桃寿翁装饰', '传统八仙桌供台', '白菊白百合花艺'],
     suitableFor: '高龄长者、传统家庭',
@@ -18,7 +25,9 @@ export const funeralHallDesigns: FuneralHallDesign[] = [
     id: 'hall-002',
     name: '现代简约灵堂',
     style: 'modern',
-    imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=modern%20minimalist%20funeral%20memorial%20hall%20with%20clean%20white%20and%20gray%20design%20elegant%20flower%20arrangements%20soft%20lighting%20contemporary%20interior%20serene%20dignified%20atmosphere&image_size=landscape_16_9',
+    imageUrl: buildImageUrl(
+      'modern minimalist funeral memorial hall, clean white and light gray design, elegant flower arrangements with white roses, soft ambient lighting, contemporary interior design, serene and dignified atmosphere, high quality professional photography'
+    ),
     description: '简洁大方的现代风格，以白灰色调为主，线条流畅，氛围宁静祥和，适合追求简约的家庭。',
     features: ['简约白灰配色', '现代几何线条', '柔和间接照明', '精致花艺点缀', '亚克力透明元素'],
     suitableFor: '中青年逝者、现代家庭',
@@ -29,7 +38,9 @@ export const funeralHallDesigns: FuneralHallDesign[] = [
     id: 'hall-003',
     name: '佛教风格灵堂',
     style: 'buddhist',
-    imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=buddhist%20style%20funeral%20memorial%20hall%20with%20golden%20Buddha%20statue%20lotus%20flowers%20incense%20candles%20tranquil%20serene%20atmosphere%20warm%20amber%20lighting%20traditional%20temple%20decor&image_size=landscape_16_9',
+    imageUrl: buildImageUrl(
+      'Buddhist style funeral memorial hall, golden Buddha statue on altar, beautiful lotus flower arrangements, incense smoke, prayer flags, warm amber lighting, tranquil and serene atmosphere, temple-like interior design, peaceful spiritual ambiance'
+    ),
     description: '以佛教元素为主题的灵堂布置，营造宁静祥和的氛围，帮助家属和亲友寄托哀思、祈福超度。',
     features: ['佛像供奉', '莲花造型花艺', '梵文经幡装饰', '佛乐背景音乐', '酥油灯祈福'],
     suitableFor: '佛教信众、虔诚家庭',
@@ -40,7 +51,9 @@ export const funeralHallDesigns: FuneralHallDesign[] = [
     id: 'hall-004',
     name: '基督教风格灵堂',
     style: 'christian',
-    imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=christian%20funeral%20memorial%20hall%20with%20white%20lilies%20cross%20symbol%20elegant%20simple%20decor%20soft%20natural%20light%20peaceful%20dignified%20atmosphere%20church%20style%20interior&image_size=landscape_16_9',
+    imageUrl: buildImageUrl(
+      'Christian funeral memorial service, elegant white lilies and cross decoration, simple and dignified setup, soft natural light, church-like atmosphere, white and light blue color scheme, peaceful and hopeful ambiance, high quality interior photography'
+    ),
     description: '以基督教信仰为主题的灵堂布置，以白百合和十字架为主要元素，氛围庄严肃穆又充满盼望。',
     features: ['十字架装饰', '白百合主花艺', '圣经经文布置', '圣诗背景音乐', '天使造型元素'],
     suitableFor: '基督教信众、教友家庭',
@@ -51,7 +64,9 @@ export const funeralHallDesigns: FuneralHallDesign[] = [
     id: 'hall-005',
     name: '极简素雅灵堂',
     style: 'minimalist',
-    imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=minimalist%20elegant%20memorial%20funeral%20hall%20with%20monochrome%20white%20flowers%20simple%20clean%20lines%20Japanese%20zen%20inspired%20serene%20peaceful%20atmosphere%20soft%20natural%20lighting&image_size=landscape_16_9',
+    imageUrl: buildImageUrl(
+      'minimalist Japanese Zen inspired funeral memorial hall, monochrome white flowers in simple vase, natural wood furniture, washi paper elements, soft natural lighting, serene and peaceful atmosphere, elegant simplicity, high quality interior design'
+    ),
     description: '受日式禅风启发的极简风格，以素白和原木色调为主，营造宁静致远的氛围，适合品味高雅的逝者。',
     features: ['素白主色调', '原木质感家具', '单支花材点缀', '枯山水元素', '柔和自然光线'],
     suitableFor: '品味高雅、文艺界人士',
@@ -62,7 +77,9 @@ export const funeralHallDesigns: FuneralHallDesign[] = [
     id: 'hall-006',
     name: '自然生态灵堂',
     style: 'nature',
-    imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=natural%20eco%20friendly%20funeral%20memorial%20hall%20with%20abundant%20green%20plants%20white%20wildflowers%20wooden%20elements%20organic%20design%20peaceful%20garden%20atmosphere%20biodegradable%20decorations&image_size=landscape_16_9',
+    imageUrl: buildImageUrl(
+      'natural eco-friendly funeral memorial hall, abundant green plants and foliage, wild white flowers, wooden and rattan furniture, organic design elements, garden-like peaceful atmosphere, biodegradable decorations, soft natural lighting'
+    ),
     description: '以自然生态为主题的灵堂布置，大量使用绿植和野花，回归自然本真，适合热爱自然的逝者。',
     features: ['大量绿植点缀', '野花组合花艺', '原木藤编材质', '环保可降解材料', '自然鸟鸣音效'],
     suitableFor: '热爱自然、环保人士',

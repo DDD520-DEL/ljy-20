@@ -2,7 +2,17 @@ import { useState } from 'react';
 import { funeralHallDesigns } from '@/data/funeralHallDesigns';
 import { FUNERAL_HALL_STYLE_CONFIG, type FuneralHallDesign, type FuneralHallStyle } from '@/types';
 import { useStore } from '@/store/useStore';
-import { Heart, X, Star, Tag, DollarSign, Users, ListChecks, Image as ImageIcon } from 'lucide-react';
+import { SmartImage } from '@/components/common/SmartImage';
+import {
+  Heart,
+  X,
+  Star,
+  DollarSign,
+  Users,
+  ListChecks,
+  Image as ImageIcon,
+  Sparkles,
+} from 'lucide-react';
 
 interface HallDesignCardProps {
   design: FuneralHallDesign;
@@ -21,25 +31,17 @@ const HallDesignCard = ({ design, isFavorite, onToggleFavorite, onViewDetail, in
       style={{ animationDelay: `${index * 50}ms` }}
       onClick={onViewDetail}
     >
-      <div className="relative aspect-video bg-slate-100 -mx-6 -mt-6 mb-4 overflow-hidden">
-        <img
+      <div className="relative -mx-6 -mt-6 mb-4">
+        <SmartImage
           src={design.imageUrl}
           alt={design.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            const parent = target.parentElement;
-            if (parent) {
-              const fallback = document.createElement('div');
-              fallback.className = 'w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400';
-              fallback.innerHTML = `<svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-sm">效果图</span>`;
-              parent.appendChild(fallback);
-            }
-          }}
+          aspectRatio="video"
+          objectFit="cover"
+          imgClassName="group-hover:scale-105 transition-transform duration-500"
+          fallbackTitle={design.name}
+          fallbackDescription="效果图加载中，点击查看详情"
         />
-        <span className={`absolute top-3 left-3 badge ${styleConfig.bgColor} ${styleConfig.color}`}>
+        <span className={`absolute top-3 left-3 badge ${styleConfig.bgColor} ${styleConfig.color} shadow-sm`}>
           {styleConfig.name}
         </span>
         <button
@@ -47,10 +49,10 @@ const HallDesignCard = ({ design, isFavorite, onToggleFavorite, onViewDetail, in
             e.stopPropagation();
             onToggleFavorite();
           }}
-          className={`absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+          className={`absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-sm ${
             isFavorite
               ? 'bg-rose-500 text-white shadow-lg'
-              : 'bg-white/80 text-slate-400 hover:bg-white hover:text-rose-500'
+              : 'bg-white/90 text-slate-400 hover:bg-white hover:text-rose-500'
           }`}
         >
           <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
@@ -67,7 +69,7 @@ const HallDesignCard = ({ design, isFavorite, onToggleFavorite, onViewDetail, in
         </div>
         <div className="flex items-center gap-1">
           <Users className="w-3.5 h-3.5" />
-          <span>{design.suitableFor}</span>
+          <span className="truncate max-w-[100px]">{design.suitableFor}</span>
         </div>
       </div>
     </div>
@@ -90,19 +92,22 @@ const HallDesignDetailModal = ({ design, isOpen, onClose, isFavorite, onToggleFa
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl animate-scale-in">
-        <div className="relative aspect-video bg-slate-100">
-          <img
+        <div className="relative">
+          <SmartImage
             src={design.imageUrl}
             alt={design.name}
-            className="w-full h-full object-cover"
+            aspectRatio="video"
+            objectFit="cover"
+            fallbackTitle={design.name}
+            fallbackDescription="效果图正在加载，请稍候..."
           />
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center text-slate-600 hover:bg-white transition-colors"
+            className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-slate-600 hover:bg-white transition-colors shadow-lg"
           >
             <X className="w-5 h-5" />
           </button>
-          <span className={`absolute bottom-4 left-4 badge ${styleConfig.bgColor} ${styleConfig.color} text-sm`}>
+          <span className={`absolute bottom-4 left-4 badge ${styleConfig.bgColor} ${styleConfig.color} text-sm shadow-sm`}>
             {styleConfig.name}
           </span>
         </div>
@@ -114,7 +119,7 @@ const HallDesignDetailModal = ({ design, isOpen, onClose, isFavorite, onToggleFa
               onClick={onToggleFavorite}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
                 isFavorite
-                  ? 'bg-rose-50 text-rose-600'
+                  ? 'bg-rose-50 text-rose-600 border border-rose-200'
                   : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-600'
               }`}
             >
@@ -144,7 +149,7 @@ const HallDesignDetailModal = ({ design, isOpen, onClose, isFavorite, onToggleFa
 
           <div className="mb-6">
             <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-              <Star className="w-4 h-4 text-gold-500" />
+              <Sparkles className="w-4 h-4 text-gold-500" />
               方案特色
             </h4>
             <div className="flex flex-wrap gap-2">
@@ -229,7 +234,7 @@ export const FuneralHallReference = () => {
                 onClick={() => setSelectedStyle(style.id)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                   selectedStyle === style.id
-                    ? 'bg-primary-700 text-white'
+                    ? 'bg-primary-700 text-white shadow-md shadow-primary-200'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -249,7 +254,7 @@ export const FuneralHallReference = () => {
             <Heart className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
             仅看收藏
             {activeFavoriteHallDesigns.length > 0 && (
-              <span className="w-5 h-5 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center">
+              <span className="w-5 h-5 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center font-medium">
                 {activeFavoriteHallDesigns.length}
               </span>
             )}
