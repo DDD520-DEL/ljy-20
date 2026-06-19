@@ -99,92 +99,206 @@ export const ObituaryGenerator = () => {
 
     const honorific = gender === '男' ? '先生' : '女士';
     const pronoun = gender === '男' ? '他' : '她';
+    const NL = '\n';
 
-    let obituary = '';
+    const lines: string[] = [];
 
     if (template === 'standard') {
-      obituary = `【讣告】
+      lines.push('【讣告】');
+      lines.push('');
 
-${name}${honorific}，${birthPlace ? '原籍' + birthPlace + '，' : ''}${occupation ? '生前系' + occupation + '。' : ''}
+      let line1 = `${name}${honorific}，`;
+      if (birthPlace) line1 += `原籍${birthPlace}，`;
+      if (occupation) line1 += `生前系${occupation}。`;
+      lines.push(line1);
+      lines.push('');
 
-${birthStr ? `${birthStr}出生，` : ''}${deathStr ? `${deathStr}${deathPlace ? '在' + deathPlace : ''}不幸逝世` : ''}${age ? `，享年${age}岁` : ''}。
+      let line2 = '';
+      if (birthStr) line2 += `${birthStr}出生，`;
+      if (deathStr) {
+        line2 += `${deathStr}`;
+        if (deathPlace) line2 += `在${deathPlace}`;
+        line2 += '不幸逝世';
+      }
+      if (age) line2 += `，享年${age}岁`;
+      line2 += '。';
+      if (line2 !== '。') lines.push(line2);
+      lines.push('');
 
-${achievements ? `${pronoun}一生勤勤恳恳、任劳任怨，${achievements}，为家庭和社会做出了积极贡献。` : `${pronoun}一生勤勤恳恳、任劳任怨，为家庭和社会做出了积极贡献。`}
+      let line3 = `${pronoun}一生勤勤恳恳、任劳任怨，`;
+      if (achievements) line3 += `${achievements}，`;
+      line3 += '为家庭和社会做出了积极贡献。';
+      lines.push(line3);
+      lines.push('');
 
-${farewellDateStr || funeralHome || memorialHall ? `兹定于${farewellDateStr ? farewellDateStr : ''}${farewellTime ? ' ' + farewellTime : ''}${funeralHome ? '在' + funeralHome : ''}${memorialHall ? ' ' + memorialHall : ''}举行告别仪式。` : ''}
+      if (farewellDateStr || funeralHome || memorialHall) {
+        let line4 = '兹定于';
+        if (farewellDateStr) line4 += farewellDateStr;
+        if (farewellTime) line4 += ` ${farewellTime}`;
+        if (funeralHome) line4 += `在${funeralHome}`;
+        if (memorialHall) line4 += ` ${memorialHall}`;
+        line4 += '举行告别仪式。';
+        lines.push(line4);
+        lines.push('');
+      }
 
-${funeralType || burialPlace ? `${funeralType ? `遵其遗愿，${funeralType}后${burialPlace ? '安葬于' + burialPlace : ''}。` : ''}${burialPlace && !funeralType ? `安葬于${burialPlace}。` : ''}` : ''}
+      if (funeralType || burialPlace) {
+        let line5 = '';
+        if (funeralType) {
+          line5 += `遵其遗愿，${funeralType}后`;
+          if (burialPlace) line5 += `安葬于${burialPlace}`;
+          line5 += '。';
+        } else if (burialPlace) {
+          line5 = `安葬于${burialPlace}。`;
+        }
+        if (line5) lines.push(line5);
+        lines.push('');
+      }
 
-${familyRep || contactPhone ? `${familyRep ? `由${familyRep}` : ''}${familyRep && relationship ? `（${relationship}）` : relationship ? `由${relationship}` : ''}${familyRep || relationship ? ' 率全家 ' : ''}谨此讣告。${contactPhone ? `\\n联系电话：${contactPhone}` : ''}` : ''}
+      if (familyRep || contactPhone || relationship) {
+        let line6 = '';
+        if (familyRep) {
+          line6 += `由${familyRep}`;
+          if (relationship) line6 += `（${relationship}）`;
+        } else if (relationship) {
+          line6 += `由${relationship}`;
+        }
+        if (familyRep || relationship) line6 += ' 率全家 ';
+        line6 += '谨此讣告。';
+        lines.push(line6);
+      }
 
-${specialNote ? `\\n注：${specialNote}` : ''}
+      if (contactPhone) {
+        lines.push(`联系电话：${contactPhone}`);
+      }
+      lines.push('');
 
-${familyRep || relationship ? `\\n${familyRep ? familyRep : relationship} 携全家哀告` : ''}`;
+      if (specialNote) {
+        lines.push(`注：${specialNote}`);
+        lines.push('');
+      }
+
+      if (familyRep || relationship) {
+        lines.push(`${familyRep ? familyRep : relationship} 携全家哀告`);
+      }
     } else if (template === 'simple') {
-      obituary = `【讣告】
+      lines.push('【讣告】');
+      lines.push('');
 
-${name}${honorific}，${birthStr ? `${birthStr}出生，` : ''}${deathStr ? `${deathStr}逝世` : ''}${age ? `，享年${age}岁` : ''}。
+      let line1 = `${name}${honorific}，`;
+      if (birthStr) line1 += `${birthStr}出生，`;
+      if (deathStr) line1 += `${deathStr}逝世`;
+      if (age) line1 += `，享年${age}岁`;
+      line1 += '。';
+      lines.push(line1);
+      lines.push('');
 
-${farewellDateStr || funeralHome ? `告别仪式定于${farewellDateStr ? farewellDateStr : ''}${farewellTime ? ' ' + farewellTime : ''}${funeralHome ? '在' + funeralHome + '举行' : ''}。` : ''}
+      if (farewellDateStr || funeralHome) {
+        let line2 = '告别仪式定于';
+        if (farewellDateStr) line2 += farewellDateStr;
+        if (farewellTime) line2 += ` ${farewellTime}`;
+        if (funeralHome) line2 += `在${funeralHome}举行`;
+        line2 += '。';
+        lines.push(line2);
+        lines.push('');
+      }
 
-${contactPhone ? `联系电话：${contactPhone}\\n` : ''}
-特此讣告。`;
+      if (contactPhone) {
+        lines.push(`联系电话：${contactPhone}`);
+        lines.push('');
+      }
+      lines.push('特此讣告。');
     } else {
-      obituary = `━━━━━━━━━━━━━━━━━━
-        【 讣  告 】
-━━━━━━━━━━━━━━━━━━
+      lines.push('━━━━━━━━━━━━━━━━━━');
+      lines.push('        【 讣  告 】');
+      lines.push('━━━━━━━━━━━━━━━━━━');
+      lines.push('');
+      lines.push(`${name}${honorific}`);
+      lines.push('');
 
-${name}${honorific}
+      if (birthPlace) lines.push(`  籍贯：${birthPlace}`);
+      if (occupation) lines.push(`  生前职业：${occupation}`);
+      lines.push(`  生卒：${birthStr || '不详'} — ${deathStr || '不详'}`);
+      lines.push(`  享年：${age || '不详'}岁`);
+      lines.push('');
+      lines.push('━━━━━━━━━━━━━━━━━━');
+      lines.push('');
+      lines.push(`  ${name}${honorific}，一生忠厚善良，勤劳俭朴，`);
+      lines.push('');
 
-${birthPlace ? `  籍贯：${birthPlace}\\n` : ''}${occupation ? `  生前职业：${occupation}\\n` : ''}
-  生卒：${birthStr || '不详'} — ${deathStr || '不详'}
-  享年：${age || '不详'}岁
+      if (achievements) {
+        lines.push(`  ${achievements}。`);
+      } else {
+        lines.push('  为家庭和社会贡献了毕生精力。');
+      }
+      lines.push('  其高尚品德，永远铭记在我们心中。');
+      lines.push('');
+      lines.push('━━━━━━━━━━━━━━━━━━');
+      lines.push('');
+      lines.push('  告别仪式');
+      lines.push(`  时间：${farewellDateStr || '待定'}${farewellTime ? ' ' + farewellTime : ''}`);
+      lines.push(`  地点：${funeralHome || memorialHall || '待定'}`);
+      lines.push('');
 
-━━━━━━━━━━━━━━━━━━
+      if (funeralType) lines.push(`  安葬方式：${funeralType}`);
+      if (burialPlace) lines.push(`  安葬地：${burialPlace}`);
+      lines.push('');
+      lines.push('━━━━━━━━━━━━━━━━━━');
+      lines.push('');
+      lines.push(`  联系人：${familyRep || relationship || '家属'}`);
+      lines.push(`  电话：${contactPhone || '待定'}`);
+      lines.push('');
 
-  ${name}${honorific}，一生忠厚善良，勤劳俭朴，
-
-${achievements ? `  ${achievements}。\\n` : '  为家庭和社会贡献了毕生精力。\\n'}
-  其高尚品德，永远铭记在我们心中。
-
-━━━━━━━━━━━━━━━━━━
-
-  告别仪式
-  时间：${farewellDateStr || '待定'}${farewellTime ? ' ' + farewellTime : ''}
-  地点：${funeralHome || memorialHall || '待定'}
-
-  ${funeralType ? `安葬方式：${funeralType}\\n` : ''}${burialPlace ? `  安葬地：${burialPlace}\\n` : ''}
-
-━━━━━━━━━━━━━━━━━━
-
-  联系人：${familyRep || relationship || '家属'}
-  电话：${contactPhone || '待定'}
-
-${specialNote ? `  备注：${specialNote}\\n━━━━━━━━━━━━━━━━━━\\n` : ''}
-  谨此讣告，望周知。
-
-  家属泣告`;
+      if (specialNote) {
+        lines.push(`  备注：${specialNote}`);
+        lines.push('━━━━━━━━━━━━━━━━━━');
+        lines.push('');
+      }
+      lines.push('  谨此讣告，望周知。');
+      lines.push('');
+      lines.push('  家属泣告');
     }
 
-    return obituary.trim();
+    return lines.join(NL).trim();
   }, [formData, template, age]);
 
   const obituaryText = useMemo(() => generateObituary(), [generateObituary]);
 
   const handleCopy = async () => {
+    const textToCopy = obituaryText;
+
+    console.log('=== 讣告内容调试 ===');
+    console.log('原始文本:', JSON.stringify(textToCopy));
+    console.log('字符数:', textToCopy.length);
+    console.log('换行符数量:', (textToCopy.match(/\n/g) || []).length);
+    console.log('是否包含 \\n 字面量:', textToCopy.includes('\\n'));
+    console.log('==================');
+
     try {
-      await navigator.clipboard.writeText(obituaryText);
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      console.log('复制成功（使用 Clipboard API）');
     } catch (err) {
+      console.warn('Clipboard API 不可用，使用后备方案:', err);
       const textarea = document.createElement('textarea');
-      textarea.value = obituaryText;
+      textarea.value = textToCopy;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '-9999px';
+      textarea.style.whiteSpace = 'pre-wrap';
       document.body.appendChild(textarea);
       textarea.select();
-      document.execCommand('copy');
+      const success = document.execCommand('copy');
       document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+
+      if (success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        console.log('复制成功（使用 execCommand）');
+      } else {
+        alert('复制失败，请手动选择文本复制');
+      }
     }
   };
 
