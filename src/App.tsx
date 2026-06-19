@@ -13,6 +13,7 @@ import { ExpenseTracker } from '@/pages/ExpenseTracker';
 import { GuestRegister } from '@/pages/GuestRegister';
 import { GiftRegistry } from '@/pages/GiftRegistry';
 import { MemorialWall } from '@/pages/MemorialWall';
+import { DocumentArchive } from '@/pages/DocumentArchive';
 import { Collaboration } from '@/pages/Collaboration';
 import { Reference } from '@/pages/Reference';
 import { ObituaryGenerator } from '@/pages/ObituaryGenerator';
@@ -97,6 +98,8 @@ function App() {
         return <ObituaryGenerator />;
       case 'memorial':
         return <MemorialWall />;
+      case 'documents':
+        return <DocumentArchive />;
       case 'collaboration':
         return <Collaboration />;
       case 'reference':

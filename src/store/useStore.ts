@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory, Guest, MemorialMessage, CondolenceGift, CeremonyStep, CeremonyStepStatus } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory, Guest, MemorialMessage, CondolenceGift, CeremonyStep, CeremonyStepStatus, FuneralDocument } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate, getDefaultTemplate, DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
 import { createDefaultItemsForDeceased } from '@/data/funeralItems';
@@ -33,6 +33,7 @@ interface AppState {
   condolenceGifts: CondolenceGift[];
 
   ceremonySteps: CeremonyStep[];
+  documents: FuneralDocument[];
 
   deceased: Deceased | null;
   activeTasks: Task[];
@@ -43,6 +44,7 @@ interface AppState {
   activeMemorialMessages: MemorialMessage[];
   activeCondolenceGifts: CondolenceGift[];
   activeCeremonySteps: CeremonyStep[];
+  activeDocuments: FuneralDocument[];
 
   addDeceased: (deceased: Deceased, templateTasks?: TemplateTaskItem[]) => void;
   switchDeceased: (deceasedId: string) => void;
@@ -103,6 +105,10 @@ interface AppState {
   setCeremonyStepStatus: (id: string, status: CeremonyStepStatus) => void;
   reorderCeremonySteps: (steps: CeremonyStep[]) => void;
   resetCeremonySteps: (deceasedId: string) => void;
+
+  addDocument: (doc: Omit<FuneralDocument, 'id' | 'uploadDate'>) => void;
+  updateDocument: (id: string, updates: Partial<FuneralDocument>) => void;
+  deleteDocument: (id: string) => void;
 }
 
 interface PersistedData {
@@ -119,6 +125,7 @@ interface PersistedData {
   memorialMessages: MemorialMessage[];
   condolenceGifts: CondolenceGift[];
   ceremonySteps: CeremonyStep[];
+  documents: FuneralDocument[];
 }
 
 const getInitialSavedTemplates = (): SavedTemplate[] => {
@@ -184,6 +191,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
       memorialMessages: persisted.memorialMessages || [],
       condolenceGifts: persisted.condolenceGifts || [],
       ceremonySteps: persisted.ceremonySteps || [],
+      documents: persisted.documents || [],
     } as PersistedData;
   }
 
@@ -211,6 +219,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
       memorialMessages: [],
       condolenceGifts: [],
       ceremonySteps: [],
+      documents: [],
     };
   }
 
@@ -274,6 +283,10 @@ const getInitialState = () => {
       activeCeremonySteps: activeDeceased
         ? (persisted.ceremonySteps || []).filter((s) => s.deceasedId === activeDeceased.id).sort((a, b) => a.order - b.order)
         : [],
+      documents: persisted.documents || [],
+      activeDocuments: activeDeceased
+        ? (persisted.documents || []).filter((d) => d.deceasedId === activeDeceased.id)
+        : [],
       categories,
       showSetup: persisted.deceaseds.length === 0,
       showMemberModal: false,
@@ -310,6 +323,8 @@ const getInitialState = () => {
     activeCondolenceGifts: [],
     ceremonySteps: [],
     activeCeremonySteps: [],
+    documents: [],
+    activeDocuments: [],
     categories,
     currentUser: null,
     showSetup: true,
@@ -327,8 +342,8 @@ const getInitialState = () => {
 
 export const useStore = create<AppState>((set, get) => {
   const persist = () => {
-    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps } = get();
-    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps });
+    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents } = get();
+    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents });
   };
 
   const persistTemplates = () => {
@@ -348,6 +363,7 @@ export const useStore = create<AppState>((set, get) => {
     const memorialMessages = state.memorialMessages ?? get().memorialMessages;
     const condolenceGifts = state.condolenceGifts ?? get().condolenceGifts;
     const ceremonySteps = state.ceremonySteps ?? get().ceremonySteps;
+    const documents = state.documents ?? get().documents;
 
     const activeDeceased = deceaseds.find((d) => d.id === activeDeceasedId) || null;
     return {
@@ -373,6 +389,9 @@ export const useStore = create<AppState>((set, get) => {
         : [],
       activeCeremonySteps: activeDeceased
         ? ceremonySteps.filter((s) => s.deceasedId === activeDeceased.id).sort((a, b) => a.order - b.order)
+        : [],
+      activeDocuments: activeDeceased
+        ? documents.filter((d) => d.deceasedId === activeDeceased.id)
         : [],
     };
   };
@@ -428,6 +447,7 @@ export const useStore = create<AppState>((set, get) => {
         const newMemorialMessages = state.memorialMessages.filter((m) => m.deceasedId !== deceasedId);
         const newCondolenceGifts = state.condolenceGifts.filter((c) => c.deceasedId !== deceasedId);
         const newCeremonySteps = state.ceremonySteps.filter((s) => s.deceasedId !== deceasedId);
+        const newDocuments = state.documents.filter((d) => d.deceasedId !== deceasedId);
         const newGeneratedMemorialTasks = { ...state.generatedMemorialTasks };
         delete newGeneratedMemorialTasks[deceasedId];
 
@@ -447,6 +467,7 @@ export const useStore = create<AppState>((set, get) => {
           memorialMessages: newMemorialMessages,
           condolenceGifts: newCondolenceGifts,
           ceremonySteps: newCeremonySteps,
+          documents: newDocuments,
           activeDeceasedId: newActiveId,
           generatedMemorialTasks: newGeneratedMemorialTasks,
           showSetup: newDeceaseds.length === 0,
@@ -958,6 +979,8 @@ export const useStore = create<AppState>((set, get) => {
         activeCondolenceGifts: [],
         ceremonySteps: [],
         activeCeremonySteps: [],
+        documents: [],
+        activeDocuments: [],
       });
     },
 
@@ -978,6 +1001,7 @@ export const useStore = create<AppState>((set, get) => {
             memorialMessages: persisted.memorialMessages || [],
             condolenceGifts: persisted.condolenceGifts || [],
             ceremonySteps: persisted.ceremonySteps || [],
+            documents: persisted.documents || [],
             currentUser: persisted.currentUser,
             notifications: persisted.notifications || [],
             generatedMemorialTasks: persisted.generatedMemorialTasks || getInitialGeneratedMemorialTasks(),
@@ -1255,6 +1279,41 @@ export const useStore = create<AppState>((set, get) => {
       set((state) => {
         const filteredSteps = state.ceremonySteps.filter((s) => s.deceasedId !== deceasedId);
         const newState = { ceremonySteps: [...filteredSteps, ...defaultSteps] };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    addDocument: (doc) => {
+      const newDoc: FuneralDocument = {
+        ...doc,
+        id: generateId(),
+        uploadDate: new Date().toISOString(),
+      };
+      set((state) => {
+        const newState = { documents: [...state.documents, newDoc] };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    updateDocument: (id, updates) => {
+      set((state) => {
+        const newState = {
+          documents: state.documents.map((d) =>
+            d.id === id ? { ...d, ...updates } : d
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    deleteDocument: (id) => {
+      set((state) => {
+        const newState = {
+          documents: state.documents.filter((d) => d.id !== id),
+        };
         return { ...newState, ...computeDerived(newState) };
       });
       persist();

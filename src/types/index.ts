@@ -373,6 +373,30 @@ export interface CeremonyStep {
   createdAt: string;
 }
 
+export type DocumentCategory = 'death_certificate' | 'cremation_certificate' | 'household_cancellation' | 'funeral_invoice' | 'cemetery_certificate' | 'social_security' | 'medical_certificate' | 'other';
+
+export const DOCUMENT_CATEGORY_CONFIG: Record<DocumentCategory, { name: string; icon: string; color: string; bgColor: string }> = {
+  death_certificate: { name: '死亡证明', icon: 'FileText', color: 'text-rose-700', bgColor: 'bg-rose-100' },
+  cremation_certificate: { name: '火化证明', icon: 'Flame', color: 'text-orange-700', bgColor: 'bg-orange-100' },
+  household_cancellation: { name: '销户证明', icon: 'Home', color: 'text-slate-700', bgColor: 'bg-slate-100' },
+  funeral_invoice: { name: '丧葬发票', icon: 'Receipt', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
+  cemetery_certificate: { name: '墓地证明', icon: 'TreePine', color: 'text-green-700', bgColor: 'bg-green-100' },
+  social_security: { name: '社保手续', icon: 'ShieldCheck', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  medical_certificate: { name: '医学证明', icon: 'HeartPulse', color: 'text-red-700', bgColor: 'bg-red-100' },
+  other: { name: '其他证件', icon: 'Folder', color: 'text-slate-600', bgColor: 'bg-slate-100' },
+};
+
+export interface FuneralDocument {
+  id: string;
+  category: DocumentCategory;
+  title: string;
+  description?: string;
+  imageUrl: string;
+  deceasedId: string;
+  uploadDate: string;
+  note?: string;
+}
+
 export const DEFAULT_CEREMONY_STEPS: Omit<CeremonyStep, 'id' | 'deceasedId' | 'createdAt'>[] = [
   {
     type: 'arrival',
