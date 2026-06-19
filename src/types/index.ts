@@ -417,6 +417,36 @@ export const EULOGY_STATUS_CONFIG: Record<EulogyStatus, { name: string; color: s
   finalized: { name: '已定稿', color: 'text-green-700', bgColor: 'bg-green-100' },
 };
 
+export type FuneralHallStyle = 'traditional' | 'modern' | 'buddhist' | 'christian' | 'minimalist' | 'nature';
+
+export const FUNERAL_HALL_STYLE_CONFIG: Record<FuneralHallStyle, { name: string; icon: string; color: string; bgColor: string }> = {
+  traditional: { name: '传统中式', icon: 'Landmark', color: 'text-red-700', bgColor: 'bg-red-100' },
+  modern: { name: '现代简约', icon: 'Building', color: 'text-slate-700', bgColor: 'bg-slate-100' },
+  buddhist: { name: '佛教风格', icon: 'Church', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+  christian: { name: '基督教风格', icon: 'Church', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  minimalist: { name: '极简素雅', icon: 'Flower2', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
+  nature: { name: '自然生态', icon: 'TreePine', color: 'text-green-700', bgColor: 'bg-green-100' },
+};
+
+export interface FuneralHallDesign {
+  id: string;
+  name: string;
+  style: FuneralHallStyle;
+  imageUrl: string;
+  description: string;
+  features: string[];
+  suitableFor: string;
+  estimatedBudget: string;
+  items: string[];
+}
+
+export interface FavoriteHallDesign {
+  designId: string;
+  deceasedId: string;
+  note?: string;
+  createdAt: string;
+}
+
 export const DEFAULT_CEREMONY_STEPS: Omit<CeremonyStep, 'id' | 'deceasedId' | 'createdAt'>[] = [
   {
     type: 'arrival',

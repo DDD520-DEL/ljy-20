@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory, Guest, MemorialMessage, CondolenceGift, CeremonyStep, CeremonyStepStatus, FuneralDocument, Eulogy, EulogyStatus } from '@/types';
+import type { Deceased, FamilyMember, Task, TaskCategory, TaskStatus, Notification, Note, SavedTemplate, TemplateTaskItem, MemorialNodeType, MemberRole, FuneralItem, FuneralItemCategory, Expense, ExpenseCategory, Guest, MemorialMessage, CondolenceGift, CeremonyStep, CeremonyStepStatus, FuneralDocument, Eulogy, EulogyStatus, FavoriteHallDesign } from '@/types';
 import { categories } from '@/data/categories';
 import { createTasksFromTemplate, getDefaultTemplate, DEFAULT_TEMPLATE_ID } from '@/data/taskTemplate';
 import { createDefaultItemsForDeceased } from '@/data/funeralItems';
@@ -35,6 +35,7 @@ interface AppState {
   ceremonySteps: CeremonyStep[];
   documents: FuneralDocument[];
   eulogies: Eulogy[];
+  favoriteHallDesigns: FavoriteHallDesign[];
 
   deceased: Deceased | null;
   activeTasks: Task[];
@@ -47,6 +48,7 @@ interface AppState {
   activeCeremonySteps: CeremonyStep[];
   activeDocuments: FuneralDocument[];
   activeEulogies: Eulogy[];
+  activeFavoriteHallDesigns: FavoriteHallDesign[];
 
   addDeceased: (deceased: Deceased, templateTasks?: TemplateTaskItem[]) => void;
   switchDeceased: (deceasedId: string) => void;
@@ -116,6 +118,10 @@ interface AppState {
   updateEulogy: (id: string, updates: Partial<Eulogy>) => void;
   deleteEulogy: (id: string) => void;
   setEulogyStatus: (id: string, status: EulogyStatus) => void;
+
+  toggleFavoriteHallDesign: (designId: string, deceasedId: string) => void;
+  isHallDesignFavorite: (designId: string, deceasedId: string) => boolean;
+  updateFavoriteHallNote: (designId: string, deceasedId: string, note: string) => void;
 }
 
 interface PersistedData {
@@ -134,6 +140,7 @@ interface PersistedData {
   ceremonySteps: CeremonyStep[];
   documents: FuneralDocument[];
   eulogies: Eulogy[];
+  favoriteHallDesigns: FavoriteHallDesign[];
 }
 
 const getInitialSavedTemplates = (): SavedTemplate[] => {
@@ -201,6 +208,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
       ceremonySteps: persisted.ceremonySteps || [],
       documents: persisted.documents || [],
       eulogies: persisted.eulogies || [],
+      favoriteHallDesigns: persisted.favoriteHallDesigns || [],
     } as PersistedData;
   }
 
@@ -230,6 +238,7 @@ const migrateOldData = (persisted: any): PersistedData | null => {
       ceremonySteps: [],
       documents: [],
       eulogies: [],
+      favoriteHallDesigns: [],
     };
   }
 
@@ -301,6 +310,10 @@ const getInitialState = () => {
       activeEulogies: activeDeceased
         ? (persisted.eulogies || []).filter((e) => e.deceasedId === activeDeceased.id)
         : [],
+      favoriteHallDesigns: persisted.favoriteHallDesigns || [],
+      activeFavoriteHallDesigns: activeDeceased
+        ? (persisted.favoriteHallDesigns || []).filter((f) => f.deceasedId === activeDeceased.id)
+        : [],
       categories,
       showSetup: persisted.deceaseds.length === 0,
       showMemberModal: false,
@@ -341,6 +354,8 @@ const getInitialState = () => {
     activeDocuments: [],
     eulogies: [],
     activeEulogies: [],
+    favoriteHallDesigns: [],
+    activeFavoriteHallDesigns: [],
     categories,
     currentUser: null,
     showSetup: true,
@@ -358,8 +373,8 @@ const getInitialState = () => {
 
 export const useStore = create<AppState>((set, get) => {
   const persist = () => {
-    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents, eulogies } = get();
-    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents, eulogies });
+    const { deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents, eulogies, favoriteHallDesigns } = get();
+    saveToStorage({ deceaseds, activeDeceasedId, members, tasks, currentUser, notifications, generatedMemorialTasks, funeralItems, expenses, guests, memorialMessages, condolenceGifts, ceremonySteps, documents, eulogies, favoriteHallDesigns });
   };
 
   const persistTemplates = () => {
@@ -381,6 +396,7 @@ export const useStore = create<AppState>((set, get) => {
     const ceremonySteps = state.ceremonySteps ?? get().ceremonySteps;
     const documents = state.documents ?? get().documents;
     const eulogies = state.eulogies ?? get().eulogies;
+    const favoriteHallDesigns = state.favoriteHallDesigns ?? get().favoriteHallDesigns;
 
     const activeDeceased = deceaseds.find((d) => d.id === activeDeceasedId) || null;
     return {
@@ -412,6 +428,9 @@ export const useStore = create<AppState>((set, get) => {
         : [],
       activeEulogies: activeDeceased
         ? eulogies.filter((e) => e.deceasedId === activeDeceased.id)
+        : [],
+      activeFavoriteHallDesigns: activeDeceased
+        ? favoriteHallDesigns.filter((f) => f.deceasedId === activeDeceased.id)
         : [],
     };
   };
@@ -469,6 +488,7 @@ export const useStore = create<AppState>((set, get) => {
         const newCeremonySteps = state.ceremonySteps.filter((s) => s.deceasedId !== deceasedId);
         const newDocuments = state.documents.filter((d) => d.deceasedId !== deceasedId);
         const newEulogies = state.eulogies.filter((e) => e.deceasedId !== deceasedId);
+        const newFavoriteHallDesigns = state.favoriteHallDesigns.filter((f) => f.deceasedId !== deceasedId);
         const newGeneratedMemorialTasks = { ...state.generatedMemorialTasks };
         delete newGeneratedMemorialTasks[deceasedId];
 
@@ -490,6 +510,7 @@ export const useStore = create<AppState>((set, get) => {
           ceremonySteps: newCeremonySteps,
           documents: newDocuments,
           eulogies: newEulogies,
+          favoriteHallDesigns: newFavoriteHallDesigns,
           activeDeceasedId: newActiveId,
           generatedMemorialTasks: newGeneratedMemorialTasks,
           showSetup: newDeceaseds.length === 0,
@@ -1393,6 +1414,53 @@ export const useStore = create<AppState>((set, get) => {
                   finalizedAt: status === 'finalized' ? new Date().toISOString() : undefined,
                 }
               : e
+          ),
+        };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    toggleFavoriteHallDesign: (designId, deceasedId) => {
+      set((state) => {
+        const existingIndex = state.favoriteHallDesigns.findIndex(
+          (f) => f.designId === designId && f.deceasedId === deceasedId
+        );
+        let newFavorites: FavoriteHallDesign[];
+        if (existingIndex >= 0) {
+          newFavorites = state.favoriteHallDesigns.filter(
+            (f) => !(f.designId === designId && f.deceasedId === deceasedId)
+          );
+        } else {
+          newFavorites = [
+            ...state.favoriteHallDesigns,
+            {
+              designId,
+              deceasedId,
+              createdAt: new Date().toISOString(),
+            },
+          ];
+        }
+        const newState = { favoriteHallDesigns: newFavorites };
+        return { ...newState, ...computeDerived(newState) };
+      });
+      persist();
+    },
+
+    isHallDesignFavorite: (designId, deceasedId) => {
+      const { favoriteHallDesigns } = get();
+      return favoriteHallDesigns.some(
+        (f) => f.designId === designId && f.deceasedId === deceasedId
+      );
+    },
+
+    updateFavoriteHallNote: (designId, deceasedId, note) => {
+      set((state) => {
+        const newState = {
+          favoriteHallDesigns: state.favoriteHallDesigns.map((f) =>
+            f.designId === designId && f.deceasedId === deceasedId
+              ? { ...f, note }
+              : f
           ),
         };
         return { ...newState, ...computeDerived(newState) };

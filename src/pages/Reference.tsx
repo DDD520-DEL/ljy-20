@@ -3,6 +3,7 @@ import { funeralHomes, cities } from '@/data/funeralHomes';
 import { funeralCustoms, regions } from '@/data/customs';
 import { guides } from '@/data/guides';
 import { AppointmentModal } from '@/components/appointment/AppointmentModal';
+import { FuneralHallReference } from '@/components/reference/FuneralHallReference';
 import type { FuneralHome } from '@/types';
 import {
   Building2,
@@ -18,9 +19,10 @@ import {
   FileText,
   Lightbulb,
   CalendarPlus,
+  Flower2,
 } from 'lucide-react';
 
-type TabType = 'funeral-homes' | 'customs' | 'guides';
+type TabType = 'funeral-homes' | 'customs' | 'guides' | 'hall-designs';
 
 export const Reference = () => {
   const [activeTab, setActiveTab] = useState<TabType>('funeral-homes');
@@ -51,6 +53,7 @@ export const Reference = () => {
 
   const tabs = [
     { id: 'funeral-homes' as TabType, label: '殡仪馆', icon: Building2 },
+    { id: 'hall-designs' as TabType, label: '灵堂布置', icon: Flower2 },
     { id: 'customs' as TabType, label: '丧葬习俗', icon: BookOpen },
     { id: 'guides' as TabType, label: '办事指南', icon: FileText },
   ];
@@ -332,6 +335,8 @@ export const Reference = () => {
           ))}
         </div>
       )}
+
+      {activeTab === 'hall-designs' && <FuneralHallReference />}
 
       <AppointmentModal
         isOpen={showAppointmentModal}
